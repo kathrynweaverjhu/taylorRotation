@@ -13,7 +13,7 @@ import subprocess
 '''Usage: ./ClassificationModel.py'''
 
 '''creating numpy arrays with annotated data'''
-subprocess.call('~/taylorRotation/preprocessing/tensorMatrixPD.py --outfile savedMatrices.npz --IDEAScalls ~/taylorRotation/preprocessing/data/ideas*getfa.bed --RNAseq ~/taylorRotation/preprocessing/data/scriptseq3.v3.filter4ChrLocAvgkw2.bed --ATACseq ~/taylorRotation/preprocessing/data/VISIONmusHem_ccREs_filter2kw.txt')
+subprocess.call('/home-3/kweave23@jhu.edu/work/users/kweave23/classification_scripts/tensorMatrixPD.py --outfile savedMatrices.npz --IDEAScalls /home-3/kweave23@jhu.edu/work/users/kweave23/data/ideas*getfa.bed --RNAseq /home-3/kweave23@jhu.edu/work/users/kweave23/data/scriptseq3.v3.filter4ChrLocAvgkw2.bed --ATACseq /home-3/kweave23@jhu.edu/work/users/kweave23/data/VISIONmusHem_ccREs_filter2kw.txt')
 
 '''loading saved numpy arrays of annotated data'''
 npzfile = np.load("savedMatrices.npz")
@@ -39,20 +39,20 @@ seq2d_train = np.reshape(X_sequences_train_full,(int(X_sequences_train_full.shap
 ATAC2d_train = np.reshape(X_ATACseq_train_full, (int(X_sequences_train_full.shape[0]),1))
 merged_train_arrays = np.concatenate((seq2d_train,X_RNAseq_train_full,ATAC2d_train), axis=1).astype(np.int32)
 
-#print(X_sequences_train_full.shape) #> (X, 4, 42400)
-#print(seq2d_train.shape) #> (X, 169600)
-#print(ATAC2d_train.shape) #> (X, 1)
-#print(merged_train_arrays.shape) #> (X,169604)
+print("X_sequences_train_full_shape: ", X_sequences_train_full.shape) #> (X, 4, 42400)
+print("seq2d_train_shape: ", seq2d_train.shape) #> (X, 169600)
+print("ATAC2d_train_shape: ", ATAC2d_train.shape) #> (X, 1)
+print("merged_train_shape: ", merged_train_arrays.shape) #> (X,169604)
 
 '''merging test arrays into a single 2D array'''
 seq2d_test = np.reshape(X_sequences_test, (int(X_sequences_test.shape[0]),-1))
 ATAC2d_test = np.reshape(X_ATACseq_test, (int(X_sequences_test.shape[0]),1))
 merged_test_arrays = np.concatenate((seq2d_test,X_RNAseq_test,ATAC2d_test), axis=1).astype(np.int32)
 
-#print(X_sequences_test.shape) #> (Z,4,42400)
-#print(seq2d_test.shape) #> (Z,169600)
-#print(ATAC2d_test.shape) #> (Z,1)
-#print(merged_test_arrays.shape) #>(Z,169604)
+print("X_sequences_test_shape: ", X_sequences_test.shape) #> (Z,4,42400)
+print("seq2d_test_shape: ",seq2d_test.shape) #> (Z,169600)
+print("ATAC2d_test_shape: ",ATAC2d_test.shape) #> (Z,1)
+print("merged_test_shape: ",merged_test_arrays.shape) #>(Z,169604)
 
 '''verify labels are int32 type'''
 X_labels_train_full = X_labels_train_full.astype(np.int32)
@@ -131,14 +131,14 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         '''
     def computeNodes(self, X, y):
         input_numpyArray_shape = self.getInputArrayShape(X,y)
-        #print(input_numpyArray_shape)
+        print("computeNodes() print1: ",input_numpyArray_shape)
         
         self.inputNodes = int(input_numpyArray_shape[1])
         self.hiddenNodes = math.ceil(int(input_numpyArray_shape[0])/
                                      (self.alpha*(self.inputNodes+self.outputNodes)))
         
-        #print(self.inputNodes)
-        #print(self.hiddenNodes)
+        print("inputNodes: ",self.inputNodes)
+        print("hiddenNodes: ",self.hiddenNodes)
     
     '''This function instantiates and compiles the model; notice, inputShape=numberOfFeatures, must be given to the input layer because I use the fit_generator function later
         run prior to this function: self.getInputArrayShape() and self.computeNodes()
@@ -208,7 +208,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
     
         sess.close()
         self.inputShape = input_numpyArray.shape
-        #print(self.inputShape)
+        print("inputShape: ",self.inputShape)
         return(input_numpyArray.shape)
     
     '''This function generates the batched data for each epoch of the fit process
@@ -218,7 +218,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         '''
         
     def generator(self, X, y):
-        #print("generator 1", X.shape, "\n", y.shape)
+        print("generator 1", X.shape, "\n", y.shape)
         sess = tf.InteractiveSession() #interactive session becomes default session
         
         placeholder = tf.placeholder(np.int32, shape=X.shape) #define a placeholder for the data
@@ -261,7 +261,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                                                        ATACseq_array), 
                                                       axis=1).astype(np.int32)
                     
-                    #print("generator 2", input_numpyArray.shape, "\n", labels_array.shape)
+                    print("generator 2", input_numpyArray.shape, "\n", labels_array.shape)
                     yield(input_numpyArray, labels_array)
 
             except tf.errors.OutOfRangeError:
@@ -275,7 +275,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         output: self.estimator is updated to equal fitted nn
                 returns self'''
     def fit(self, X, y):
-        #print("fit print 1: ", X.shape, "\n", y.shape)
+        print("fit print 1: ", X.shape, "\n", y.shape)
         
         self.computeNodes(X,y)
         
@@ -297,7 +297,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                 returns this precision score as well
         '''    
     def score(self, X, y):
-        #print("Score print 1: ", X.shape)
+        print("Score print 1: ", X.shape)
         all_pred_y = []
         all_true_y = []
         instance_len = []
@@ -316,11 +316,11 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                 tf.initialize_all_variables().run()
                 features,labels = tf.get_default_session().run(nextOutput)
 
-                #print(features.shape)
-                #print(type(features))
-                #print(labels.shape)
-                #print(type(labels))
-                #print("-----Break-----")
+                print("features: ",features.shape)
+                print(type(features))
+                print("labels: ",labels.shape)
+                print(type(labels))
+                print("-----Break-----")
 
                 labels_array = labels
                 seq_array = np.reshape(features[:,:-4], (int(labels_array.shape[0]),4,-1))
@@ -344,7 +344,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                                                    ATACseq_array), 
                                                   axis=1).astype(np.int32)
 
-                #print("Score print 2", input_numpyArray2.shape, "\n", labels_array.shape)
+                print("Score print 3", input_numpyArray2.shape, "\n", labels_array.shape)
 
                 pred_y = self.estimator.predict(input_numpyArray2)
                 
@@ -353,7 +353,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                 all_pred_y.append(pred_y)
                 all_true_y.append(labels)
                 
-                #print("Score print 3: ", pred_y.shape)
+                print("Score print 4: ", pred_y.shape)
         
         except tf.errors.OutOfRangeError:
             pass
@@ -369,7 +369,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                     correct_pred += 1
 
         precision = correct_pred/total_instances
-        #print("score print 4: ", precision)
+        print("score print 5: ", precision)
         self.estimator.score = precision    
         
         sess.close()

@@ -44,7 +44,7 @@ for file in fileList1: #IDEAScalls ##filter out if label == 0
 
 """annotating with RNAseq - file ex: chr    geneStart    geneEnd    Lsk=0.0;Cmp=72.0;Mep=0.0;G1e=180.0;Er4=0.0;Cfue=0.0;Eryad=0.0;Cfum=0.0;Imk=0.0;Gmp=0.0;Mon=0.0;Neu=0.0;"""
 for cell_type in cell_types:
-    bedtools_closest_out = subprocess.check_output("bedtools closest -k 3 -a ~/taylorRotation/preprocessing/data/ideasVisionV20p8Seg{}getfa.bed -b {} -t last".format(cell_type, file2), shell=True).decode("utf-8").splitlines()
+    bedtools_closest_out = subprocess.check_output("bedtools closest -k 3 -a /home-3/kweave23@jhu.edu/work/users/kweave23/data/ideasVisionV20p8Seg{}getfa.bed -b {} -t last".format(cell_type, file2), shell=True).decode("utf-8").splitlines()
     for line in bedtools_closest_out: #3 lines correspond to the same location in the IDEAS file
         fields=line.strip("\r\n;").split("\t")
         chrom, startL, endL, startf, endf = fields[0], int(fields[1]), int(fields[2]), int(fields[11]), int(fields[12])
@@ -59,7 +59,7 @@ for cell_type in cell_types:
 """annotating with ATACseq - file ex: chr    geneStart    geneEnd    Lsk=0;Cmp=0;Mep=0;G1e=0;Er4=0;Cfue=0;Eryad=0;Cfum=0;Imk=0;Gmp=0;Mon=0;Neu=0;"""
 ATACseqContainment = 0.5 #minimum containment or sequence overlap for the annotation to be added to the loc dictionary list for that genome location
 for cell_type in cell_types:
-    bedtools_out = subprocess.check_output("bedtools intersect -loj -a ~/taylorRotation/preprocessing/data/ideasVisionV20p8Seg{}getfa.bed -b {}".format(cell_type, file3), shell=True).decode("utf-8").splitlines()
+    bedtools_out = subprocess.check_output("bedtools intersect -loj -a /home-3/kweave23@jhu.edu/work/users/kweave23/data/ideasVisionV20p8Seg{}getfa.bed -b {}".format(cell_type, file3), shell=True).decode("utf-8").splitlines()
     for line in bedtools_out:
         fields=line.strip("\r\n;").split("\t")
         chrom, startL, endL, startf, endf = fields[0], int(fields[1]), int(fields[2]), int(fields[11]), int(fields[12])
