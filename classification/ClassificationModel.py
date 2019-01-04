@@ -13,7 +13,7 @@ import subprocess
 '''Usage: ./ClassificationModel.py'''
 
 '''creating numpy arrays with annotated data'''
-subprocess.call('/home-3/kweave23@jhu.edu/work/users/kweave23/classification_scripts/tensorMatrixPD.py --outfile savedMatrices.npz --IDEAScalls /home-3/kweave23@jhu.edu/work/users/kweave23/data/ideas*getfa.bed --RNAseq /home-3/kweave23@jhu.edu/work/users/kweave23/data/scriptseq3.v3.filter4ChrLocAvgkw2.bed --ATACseq /home-3/kweave23@jhu.edu/work/users/kweave23/data/VISIONmusHem_ccREs_filter2kw.txt')
+subprocess.call(['/home-3/kweave23@jhu.edu/work/users/kweave23/classification_scripts/tensorMatrixPD.py', '--outfile', 'savedMatrices.npz', '--IDEAScalls', '/home-3/kweave23@jhu.edu/work/users/kweave23/data/ideas*getfa.bed', '--RNAseq', '/home-3/kweave23@jhu.edu/work/users/kweave23/data/scriptseq3.v3.filter4ChrLocAvgkw2.bed', '--ATACseq', '/home-3/kweave23@jhu.edu/work/users/kweave23/data/VISIONmusHem_ccREs_filter2kw.txt'])
 
 '''loading saved numpy arrays of annotated data'''
 npzfile = np.load("savedMatrices.npz")
