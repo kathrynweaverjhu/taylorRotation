@@ -8,12 +8,8 @@ import sklearn.model_selection as sms
 import tensorflow as tf
 from tensorflow import keras
 from sklearn.externals import joblib
-import subprocess
 
 '''Usage: ./ClassificationModel.py'''
-
-'''creating numpy arrays with annotated data'''
-subprocess.call(['/home-3/kweave23@jhu.edu/work/users/kweave23/classification_scripts/tensorMatrixPD.py', '--outfile', 'savedMatrices.npz', '--IDEAScalls', '/home-3/kweave23@jhu.edu/work/users/kweave23/data/ideas*getfa.bed', '--RNAseq', '/home-3/kweave23@jhu.edu/work/users/kweave23/data/scriptseq3.v3.filter4ChrLocAvgkw2.bed', '--ATACseq', '/home-3/kweave23@jhu.edu/work/users/kweave23/data/VISIONmusHem_ccREs_filter2kw.txt'])
 
 '''loading saved numpy arrays of annotated data'''
 npzfile = np.load("savedMatrices.npz")
@@ -84,7 +80,7 @@ param_grid = {'alpha': [0.1,0.2,0.3,0.4,0.5,1,2,3,4,5,6,7,8,9,10],
               'pool_size': [1,2,3,4,5,6,9,12], 
               'strides': [1,2,3,4,5,6] ,
               'activation':['relu','elu'], 
-              'epochs':[2,3,4,5,6,7,8,9,10,20,30],
+              'epochs':[2,3,4,5,6,7,8,9,10,20],
               'batchSize':[32,64,128,256,500,750,1000,1500,2000]}
               
 #wrapper class of custom sklearn estimator              
@@ -376,7 +372,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         return(self.estimator.score)
 
 train_full_nn=nn_wrap(**params)
-rsearch = sms.RandomizedSearchCV(estimator = train_full_nn, param_distributions=param_grid, n_iter=100) 
+rsearch = sms.RandomizedSearchCV(estimator = train_full_nn, param_distributions=param_grid, n_iter=50) 
 rsearch.fit(merged_train_arrays, X_labels_train_full)
 
 filename = 'VISION_classification_RSCV_best'
