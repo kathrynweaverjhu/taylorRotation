@@ -38,7 +38,7 @@ for file in fileList1: #IDEAScalls ##filter out if label == 0
         if int(fields[3]) == 0: #quiescent
             numQuiescent += 1
             pass
-        else:
+        elif int(fields[2]) - int(fields[1] <= 10000:
             loc[cellTypeI,chrom,start,end] = [int(fields[3]), fields[9]] #ideaslabel=fields[3], sequence=fields[9]
         
 
@@ -50,6 +50,8 @@ for cell_type in cell_types:
         chrom, startL, endL, startf, endf = fields[0], int(fields[1]), int(fields[2]), int(fields[11]), int(fields[12])
         if int(fields[3]) == 0: #quiescent
             pass
+        elif int(fields[2]) - int(fields[1]) > 10000:
+            pass        
         else:
             cellTypeIndex = fields[13].split(";")
             tpm = dict([x.split('=') for x in cellTypeIndex])[cell_type]
@@ -64,6 +66,8 @@ for cell_type in cell_types:
         fields=line.strip("\r\n;").split("\t")
         chrom, startL, endL, startf, endf = fields[0], int(fields[1]), int(fields[2]), int(fields[11]), int(fields[12])
         if int(fields[3]) == 0: #quiescent
+            pass
+        elif int(fields[2]) - int(fields[1]) > 10000:
             pass
         elif fields[10] == ".":
             loc[cell_type, chrom, startL, endL].append(0) #no containment/or overlap between IDEAS and ATAC
@@ -125,13 +129,13 @@ for (cellType, chrom, start, end) in loc:
     else:
         ATAC_seq.append(0)
     sequence = loc[cellType,chrom,start,end][1]
-    sequenceTensorial = np.zeros((4,42400)) #2D array of shape (4,42400)
+    sequenceTensorial = np.zeros((4,10000)) #2D array of shape (4,10000)
 
     for i,n in enumerate(sequence.lower()):
         sequenceTensorial[sequenceDict[n],i]=1
         
 
-    sequenceTensorial[:,len(sequence)+1:42400] = np.nan #for any column values that are blank because the sequence isn't 42400 nucleotides, NaN
+    sequenceTensorial[:,len(sequence)+1:10000] = np.nan #for any column values that are blank because the sequence isn't 10000 nucleotides, NaN
 
     sequences.append(sequenceTensorial) #append the 2D array to the list
 
