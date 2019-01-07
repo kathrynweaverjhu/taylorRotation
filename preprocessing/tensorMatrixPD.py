@@ -22,6 +22,7 @@ file2 = args.RNAseq[0] #RNAseq files
 file3 = args.ATACseq[0] #ATACseq files
 outfile = args.outfile[0]
 
+print("First print statement")
 """annotating data"""
 numQuiescent=0
 numTotal = 0
@@ -38,10 +39,11 @@ for file in fileList1: #IDEAScalls ##filter out if label == 0
         if int(fields[3]) == 0: #quiescent
             numQuiescent += 1
             pass
-        elif int(fields[2]) - int(fields[1] <= 10000:
+        elif int(fields[2]) - int(fields[1]) <= 10000:
             loc[cellTypeI,chrom,start,end] = [int(fields[3]), fields[9]] #ideaslabel=fields[3], sequence=fields[9]
         
-
+print("IDEAS sequences added to dictionary")
+                                  
 """annotating with RNAseq - file ex: chr    geneStart    geneEnd    Lsk=0.0;Cmp=72.0;Mep=0.0;G1e=180.0;Er4=0.0;Cfue=0.0;Eryad=0.0;Cfum=0.0;Imk=0.0;Gmp=0.0;Mon=0.0;Neu=0.0;"""
 for cell_type in cell_types:
     bedtools_closest_out = subprocess.check_output("bedtools closest -k 3 -a /home-3/kweave23@jhu.edu/work/users/kweave23/data/ideasVisionV20p8Seg{}getfa.bed -b {} -t last".format(cell_type, file2), shell=True).decode("utf-8").splitlines()
@@ -57,7 +59,8 @@ for cell_type in cell_types:
             tpm = dict([x.split('=') for x in cellTypeIndex])[cell_type]
             loc[cell_type,chrom,startL,endL].append(float(tpm))
 
-
+print("RNAseq values added to dictionary")
+                                  
 """annotating with ATACseq - file ex: chr    geneStart    geneEnd    Lsk=0;Cmp=0;Mep=0;G1e=0;Er4=0;Cfue=0;Eryad=0;Cfum=0;Imk=0;Gmp=0;Mon=0;Neu=0;"""
 ATACseqContainment = 0.5 #minimum containment or sequence overlap for the annotation to be added to the loc dictionary list for that genome location
 for cell_type in cell_types:
@@ -80,6 +83,8 @@ for cell_type in cell_types:
             else:
                 loc[cell_type,chrom,startL,endL].append(0) #below specified containment level
 
+print("ATACseq values added to dictionary")
+                                  
 """separating annotated data into matched arrays"""
 cellTypeIndex = []
 labels = []
@@ -139,12 +144,18 @@ for (cellType, chrom, start, end) in loc:
 
     sequences.append(sequenceTensorial) #append the 2D array to the list
 
+print("Lists made")
+                                  
 cellTypeIndex = np.array(cellTypeIndex, dtype=np.intp)
 labels = np.array(labels, dtype=np.intp)
 sequences = np.array(sequences) #make the list of 2D arrays a 3D array
 RNA_seq = np.array(RNA_seq, dtype=np.float_)
 ATAC_seq = np.array(ATAC_seq, dtype=np.bool_)    
 
+print("Converted to arrays")  
+                                  
 f = open(outfile, 'wb')
 np.savez(f, cellTypeIndex = cellTypeIndex, labels = labels, sequences=sequences, RNA_seq = RNA_seq, ATAC_seq = ATAC_seq)
 f.close()
+
+print("File should be saved")
