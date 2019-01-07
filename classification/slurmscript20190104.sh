@@ -5,7 +5,7 @@
 #SBATCH --partition=lrgmem
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=48
-#SBATCH --mem=1024GB
+#SBATCH --mem=1000000M
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=kweave23@jhu.edu
 #SBATCH --output=outfile%a%x.out
