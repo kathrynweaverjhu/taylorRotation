@@ -87,7 +87,7 @@ print("test arrays should be saved")
 '''Tuning the model using RandomizedSearchCV while employing placeholders, an initializable iterator, and fit_generator to input large amounts of data'''
 #default params for nn_wrap class
 params = {'alpha':0.3, 
-          'filters':30, 
+          'filters':20, 
           'kernel_size':6, 
           'pool_size': 4, 
           'strides':2, 
@@ -324,7 +324,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         '''    
     def score(self, X, y):
         print("Score print 1: ", X.shape)
-	print("self.Parameters:\nalpha: ",self.alpha,"\nfilters: ",self.filters,"\nkernel_size: ",self.kernel_size,"\nactivation: ", self.activation, "\npool_size: ", self.pool_size, "\nstrides: ", self.strides, "\nepochs: ", self.epochs,"\ninputNodes: ", self.inputNodes, "\nhiddenNodes: ", self.hiddenNodes, "\nbatchSize: ", self.batchSize)
+	    print("self.Parameters:\nalpha: ",self.alpha,"\nfilters: ",self.filters,"\nkernel_size: ",self.kernel_size,"\nactivation: ", self.activation, "\npool_size: ", self.pool_size, "\nstrides: ", self.strides, "\nepochs: ", self.epochs,"\ninputNodes: ", self.inputNodes, "\nhiddenNodes: ", self.hiddenNodes, "\nbatchSize: ", self.batchSize)
         all_pred_y = []
         all_true_y = []
         instance_len = []
@@ -388,7 +388,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
          
         '''compute accuracy'''
         y_pred = []
-	y_true = []
+	    y_true = []
         correct_pred = 0
         for i in range(len(all_pred_y)):
             for j in range(instance_len[i]):
@@ -402,66 +402,66 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         accuracy = (correct_pred/total_instances)*100
         print("score print 5: ", accuracy)
         self.estimator.score = accuracy
-	self.y_pred = y_pred
-	self.y_true = y_true    
+	    self.y_pred = y_pred
+	    self.y_true = y_true    
         
 
         sess.close()
         return(self.estimator.score)
 
     def predict(self, X, y):
-	accuracy = self.score(X,y)
+	    accuracy = self.score(X,y)
 	
-	'''confusion_matrix'''
-	confusion_matrix = skm.confusion_matrix(self.y_true, self.y_pred)
-	
-	'''classification_report'''
-	classification_report = skm.classification_report(self.y_true, self.y_pred)
-	
-	'''binarize the predictions'''
-	y_true = skp.label_binarize(self.y_true, classes=np.arange(5))
-	y_pred = skp.label_binarize(self.y_pred, classes=np.arange(5))
+	    '''confusion_matrix'''
+        confusion_matrix = skm.confusion_matrix(self.y_true, self.y_pred)
 
-	'''precision, recall, average_precision, false_positive_rate, true_positive_rate, roc_auc'''
-	num_classes = int(np.max(self.y_true)+1)
-	print("num_classes = 5: ", num_classes == 5)
-	precision = dict()
-	recall = dict()
-	average_precision = dict()
-	fpr = dict()
-	tpr = dict()
-	roc_auc = dict()
-	for i in range(num_classes):
-	    precision[i], recall[i], _ = skm.precision_recall_curve(y_true[:,i], y_pred[:,i])
-	    average_precision[i] = skm.average_precision_score(y_true[:,i], y_pred[:,i])
-	    fpr[i], tpr[i], _ = skm.roc_curve(y_true[:,i], y_pred[:,i])    
-	    roc_auc[i] = skm.auc(fpr[i], tpr[i])
+        '''classification_report'''
+        classification_report = skm.classification_report(self.y_true, self.y_pred)
+
+        '''binarize the predictions'''
+        y_true = skp.label_binarize(self.y_true, classes=np.arange(5))
+        y_pred = skp.label_binarize(self.y_pred, classes=np.arange(5))
+
+        '''precision, recall, average_precision, false_positive_rate, true_positive_rate, roc_auc'''
+        num_classes = int(np.max(self.y_true)+1)
+        print("num_classes = 5: ", num_classes == 5)
+        precision = dict()
+        recall = dict()
+        average_precision = dict()
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        for i in range(num_classes):
+            precision[i], recall[i], _ = skm.precision_recall_curve(y_true[:,i], y_pred[:,i])
+            average_precision[i] = skm.average_precision_score(y_true[:,i], y_pred[:,i])
+            fpr[i], tpr[i], _ = skm.roc_curve(y_true[:,i], y_pred[:,i])    
+            roc_auc[i] = skm.auc(fpr[i], tpr[i])
+
+        '''A micro-average - quantifing score on all classes jointly'''
+        precision["micro"], recall["micro"], _ = skm.precision_recall_curve(y_true.ravel(), y_pred.ravel())
+        average_precision["micro"] = skm.average_precision_score(y_true, y_pred, average="micro")
+        print("Average precision score, micro-averaged over all classes: {0:0.2f}".format(average_precision["micro"]))
+
+        '''Compute micro-average ROC curve and ROC area'''
+        fpr["micro"], tpr["micro"],_ = skm.roc_curve(y_true.ravel(), y_pred.ravel())
+        roc_auc["micro"] = skm.auc(fpr["micro"], tpr["micro"])
+
+        '''Compute macro-average ROC curve and ROC area - First aggregate all false positive rates'''
+        all_fpr = np.unique(np.concatenate([fpr[i] for i in range(num_classes)]))
+
+        '''-Then interpolate all ROC curves'''
+        mean_tpr = np.zeros_like(all_fpr)
+        for i in range(num_classes):
+            mean_tpr += interp(all_fpr, fpr[i], tpr[i])
+
+        '''-Finally average it and compute AUC'''
+        mean_tpr /= num_classes
+
+        fpr["macro"] = all_fpr
+        tpr["macro"] = mean_tpr
+        roc_auc["macro"] = skm.auc(fpr["macro"], tpr["macro"])
 	
-	'''A micro-average - quantifing score on all classes jointly'''
-	precision["micro"], recall["micro"], _ = skm.precision_recall_curve(y_true.ravel(), y_pred.ravel())
-	average_precision["micro"] = skm.average_precision_score(y_true, y_pred, average="micro")
-	print("Average precision score, micro-averaged over all classes: {0:0.2f}".format(average_precision["micro"]))
-	
-	'''Compute micro-average ROC curve and ROC area'''
-	fpr["micro"], tpr["micro"],_ = skm.roc_curve(y_true.ravel(), y_pred.ravel())
-	roc_auc["micro"] = skm.auc(fpr["micro"], tpr["micro"])
-
-	'''Compute macro-average ROC curve and ROC area - First aggregate all false positive rates'''
-	all_fpr = np.unique(np.concatenate([fpr[i] for i in range(num_classes)]))
-
-	'''-Then interpolate all ROC curves'''
-	mean_tpr = np.zeros_like(all_fpr)
-	for i in range(num_classes):
-	    mean_tpr += interp(all_fpr, fpr[i], tpr[i])
-
-	'''-Finally average it and compute AUC'''
-	mean_tpr /= num_classes
-
-	fpr["macro"] = all_fpr
-	tpr["macro"] = mean_tpr
-	roc_auc["macro"] = skm.auc(fpr["macro"], tpr["macro"])
-	
-	return(accuracy, confusion_matrix, classification_report, precision, recall, fpr, tpr, roc_auc, average_precision)
+	    return(accuracy, confusion_matrix, classification_report, precision, recall, fpr, tpr, roc_auc, average_precision)
 
 train_full_nn=nn_wrap(**params)
 print("-----------WRAPPER INSTANTIATED-------------")
@@ -551,7 +551,7 @@ plt.xlim([0.0, 1.0])
 plt.ylim([0.0,1.05])
 plt.xlabel('False Positive Rate', fontsize=15)
 plt.ylabel('True Positive Rate', fontsize=15)
-fig.suptitle("Receiver Operating Characteristic', fontsize=15)
+fig.suptitle("Receiver Operating Characteristic", fontsize=15)
 plt.legend(loc='lower right', prop=dict(size=7))
 fig.savefig("ROC_AUC_all_nogrid.png")
 plt.close(fig)
@@ -560,8 +560,8 @@ print("ROC-AUC all classes plotted")
 '''Confusion matrix with number labels'''
 def plot_confusion_matrix(cm, labeling=True, normalize=False, title='Confusion Matrix', cmap='Greys'):
     if normalize:
-	cm = cm.astype('float')/cm.sum(axis=1)[:,np.newaxis]
-	print("Normalized confusion matrix")
+	    cm = cm.astype('float')/cm.sum(axis=1)[:,np.newaxis]
+	    print("Normalized confusion matrix")
     
     m = np.max(np.abs(cm))
     vmin = 0 if normalize else -1*m
@@ -578,11 +578,11 @@ def plot_confusion_matrix(cm, labeling=True, normalize=False, title='Confusion M
 
     for i,j in itertools.product(range(int(cm.shape[0])), range(int(cm.shape[1]))):
         if cmap == 'Greys':
-	    color ='white' if cm[i,j] > thresh else 'black'
-	elif cmap == 'viridis':
-	    color = 'black' if cm[i,j] > thresh else 'white'
-	if labeling:
-	    plt.text(j+0.5,i+0.5, format(cm[i,j],fmt), horizontalalignment='center', verticalalignment = 'center', color=color)
+	        color ='white' if cm[i,j] > thresh else 'black'
+	    elif cmap == 'viridis':
+	        color = 'black' if cm[i,j] > thresh else 'white'
+	    if labeling:
+	        plt.text(j+0.5,i+0.5, format(cm[i,j],fmt), horizontalalignment='center', verticalalignment = 'center', color=color)
     
     ax.set_ylabel('True label', fontsize=20)
     ax.set_xlabel('Predicted label', fontsize=20)
@@ -597,7 +597,7 @@ plot_confusion_matrix(confusion_matrix)
 plot_confusion_matrix(confusion_matrix, labeling=False)
 plot_confusion_matrix(confusion_matrix, cmap='viridis')
 plot_confusion_matrix(confusion_matrix, cmap='viridis', labeling=False)
-plot_confusion_matrix(confusion_matrix, normalize=True, cmap='viridis, labeling=False)
+plot_confusion_matrix(confusion_matrix, normalize=True, cmap='viridis', labeling=False)
 plot_confusion_matrix(confusion_matrix, normalize=True, labeling=False)
 print("8 confusion matrices plotted")
 print("-------End Metrics------")
