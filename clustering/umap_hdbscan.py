@@ -63,12 +63,11 @@ parameters_a = [15,20]#,30,40,50] #n_neighbors
 parameters_b = [10,15]#,20,25,30] #min_samples
 parameters_c = [2,50]#,100,250,500] #min_cluster_size
 print("--2D_Clustering--")
-fig, (ax1, ax2, ax3) = plt.subplots(1,3,figsize=(45,20))
+fig, (ax1, ax2, ax3) = plt.subplots(1,3,figsize=(45,20), sharey=True)
 for parameter_a in parameters_a:
-
     clusterable_embedding = umap.UMAP(n_neighbors = parameter_a, min_dist = 0, n_components=2, metric = 'canberra', random_state=36).fit_transform(merged_train_arrays)
 
-    image1 = ax1.scatter(clusterable_embedding[:,0], clusterable_embedding[:,1], s=0.75, alpha = 0.5, c=X_labels_train_full, cmap='viridis')
+    image1 = ax1.scatter(clusterable_embedding[:,0], clusterable_embedding[:,1], alpha = 0.5, c=X_labels_train_full, cmap='viridis')
     cbar1 = plt.colorbar(image1, ticks=np.arange(27), ax=ax1)
     ax1.set_title("Following UMAP Embedding:\nColor-IDEAS label",fontsize=20)
 
@@ -76,20 +75,26 @@ for parameter_a in parameters_a:
         for parameter_c in parameters_c:
             labels_cluster = hdbscan.HDBSCAN(min_samples = parameter_b, min_cluster_size=parameter_c, metric='canberra').fit_predict(clusterable_embedding)
             highestCluster = max(labels_cluster)
+            numTicks = len(np.unique(labels_cluster))
 
-            image2 = ax2.scatter(clusterable_embedding[:,0], clusterable_embedding[:,1], s=0.75, alpha=0.5, c=labels_cluster, cmap='viridis')
-            cbar2 = plt.colorbar(image2, ticks=np.arange(-1,highestCluster+1), ax=ax2)
-            ax2.set_title("Following HDBSCAN:\nColor-cluster", fontsize=20)
+            image2 = ax2.scatter(clusterable_embedding[:,0], clusterable_embedding[:,1], alpha=0.5, c=labels_cluster, cmap='viridis')
+            cbar2 = plt.colorbar(image2, ticks=np.arange(numTicks), ax=ax2)
+            ax2.set_title("Following HDBSCAN:\nColor-clusters", fontsize=20)
 
             clustered = (labels_cluster >= 0)
-            image3 = ax3.scatter(clusterable_embedding[~clustered,0], clusterable_embedding[~clustered,1],c='gray', s=0.75, alpha=0.5)
-            image3 = ax3.scatter(clusterable_embedding[clustered,0], clusterable_embedding[clustered,1], c=labels_cluster[clustered], s=0.75, alpha=0.5, cmap="viridis")
-            cbar3 = plt.colorbar(image3, ticks=np.arange(highestCluster+1),ax=ax3)
-            ax3.set_title("Following HDBSCAN:\nColor-cluster & noise", fontsize=20)
+            print(np.unique(clustered))
+            image3 = ax3.scatter(clusterable_embedding[~clustered,0], clusterable_embedding[~clustered,1],c='gray', alpha=0.5)
+            image3 = ax3.scatter(clusterable_embedding[clustered,0], clusterable_embedding[clustered,1], c=labels_cluster[clustered], alpha=0.5, cmap="viridis")
+            cbar3 = plt.colorbar(image3, ticks=np.arange(highestCluster+1), ax=ax3)
+            ax3.set_title("Following HDBSCAN:\nColor-noise", fontsize=20)
 
-            fig.savefig("2d_{}_{}_{}.png".format(parameter_a, parameter_b, parameter_c))
+            fig.savefig("2d_{}_{}_{}_try3.png".format(parameter_a, parameter_b, parameter_c))
             plt.close(fig)
-
+            ax2.cla()
+            cbar2.remove()
+            ax3.cla()
+            cbar3.remove()
+           
             noise = 0
             for i in range(len(labels_cluster)):
                 if labels_cluster[i] == -1:
@@ -99,9 +104,11 @@ for parameter_a in parameters_a:
             print("Max cluster: ",highestCluster)
             print("Len of unique clusters: ",len(np.unique(labels_cluster)))
             print("Unique clusters: ",np.unique(labels_cluster))
-
+    
+    ax1.cla()
+    cbar1.remove()
 print("--3D_Clustering--")
-fig, (ax1,ax2,ax3) = plt.subplots(1,3,figsize=(45,20))
+fig, (ax1,ax2,ax3) = plt.subplots(1,3,figsize=(100,40))
 ax1 = Axes3D(fig)
 ax1.set_title("Following UMAP Embedding\nColor-IDEAS label", fontsize=20)
 ax2 = Axes3D(fig)
@@ -110,33 +117,42 @@ ax3 = Axes3D(fig)
 ax3.set_title("Following HDBSCAN:\nColor-cluster & noise", fontsize=20)
 for parameter_a in parameters_a:
     clusterable_embedding2 = umap.UMAP(n_neighbors = parameter_a, min_dist = 0, n_components=3, metric = 'canberra', random_state=36).fit_transform(merged_train_arrays)
-    
+
     def animate(i):
         ax1.view_init(elev=10, azim=i)
         ax2.view_init(elev=10, azim=i)
         ax3.view_init(elev=10, azim=i)
         return fig,
-            
+
     for parameter_b in parameters_b:
         for parameter_c in parameters_c:
             labels_cluster2 = hdbscan.HDBSCAN(min_samples = parameter_b, min_cluster_size=parameter_c, metric='canberra').fit_predict(clusterable_embedding2)
             highestCluster2 = max(labels_cluster2)
             clustered2 = (labels_cluster2 >=0)
-            
+
             def init():
-                im = ax1.scatter(clusterable_embedding2[:,0], clusterable_embedding2[:,1], clusterable_embedding2[:,2], s=0.75, alpha=0.5, c=X_labels_train_full, cmap='viridis')
+                im = ax1.scatter(clusterable_embedding2[:,0], clusterable_embedding2[:,1], clusterable_embedding2[:,2], alpha=0.5, c=X_labels_train_full, cmap='viridis')
                 cbar1 = fig.colorbar(im, ticks=np.arange(27), ax=ax1)
-                im2 = ax2.scatter(clusterable_embedding2[:,0],clusterable_embedding2[:,1],clusterable_embedding2[:,2],s=0.75, alpha=0.5, c=labels_cluster2,cmap='viridis')
+                im2 = ax2.scatter(clusterable_embedding2[:,0],clusterable_embedding2[:,1],clusterable_embedding2[:,2], alpha=0.5, c=labels_cluster2,cmap='viridis')
                 cbar2 = fig.colorbar(im2, ticks=np.arange(-1, highestCluster2+1), ax=ax2)
-                im3 = ax3.scatter(clusterable_embedding2[~clustered2,0], clusterable_embedding2[~clustered2,1], clusterable_embedding2[~clustered2,2],c='gray', s=0.75, alpha=0.5)
-                im3 = ax3.scatter(clusterable_embedding2[clustered2,0], clusterable_embedding2[clustered2,1], clusterable_embedding2[clustered2,2],c=labels_cluster2[clustered2], s=0.75, alpha=0.5, cmap='viridis')
+                im3 = ax3.scatter(clusterable_embedding2[~clustered2,0], clusterable_embedding2[~clustered2,1], clusterable_embedding2[~clustered2,2],c='gray', alpha=0.5)
+                im3 = ax3.scatter(clusterable_embedding2[clustered2,0], clusterable_embedding2[clustered2,1], clusterable_embedding2[clustered2,2],c=labels_cluster2[clustered2], alpha=0.5, cmap='viridis')
                 cbar3 = fig.colorbar(im3, ticks=np.arange(highestCluster2+1), ax=ax3)
                 return fig,
-        
+
             anim = animation.FuncAnimation(fig, animate, init_func=init, frames=360, interval=20, blit=True)
             anim.save('basic_animation_3d_{}_{}_{}.mp4'.format(parameter_a, parameter_b, parameter_c), fps=30, extra_args=['-vcodec','libx264'])
+            fig.clf()
+            fig, (ax1,ax2,ax3) = plt.subplots(1,3,figsize=(45,20))
+            ax1 = Axes3D(fig)
+            ax1.set_title("Following UMAP Embedding\nColor-IDEAS label", fontsize=20)
+            ax2 = Axes3D(fig)
+            ax2.set_title("Following HDBSCAN:\nColor-cluster", fontsize=20)
+            ax3 = Axes3D(fig)
+            ax3.set_title("Following HDBSCAN:\nColor-cluster & noise", fontsize=20)
             
             noise = 0
+            
             for i in range(len(labels_cluster2)):
                 if labels_cluster2[i] == -1:
                     noise += 1

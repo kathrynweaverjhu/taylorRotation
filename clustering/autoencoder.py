@@ -3,7 +3,7 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-#from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D
 import sklearn.model_selection as sms
 import tensorflow as tf
 from tensorflow import keras
@@ -58,9 +58,9 @@ np.savez(f, Y_cellTypeIndex_test = Y_cellTypeIndex_test, X_labels_test = X_label
 f.close()
 print("testArrays file should be saved")
 
-'''input shape and autoencoder architecture_3: 169604 -> 5000 -> 1000 -> 500 -> 250 -> 3 -> 250 -> 500 -> 1000 -> 5000 -> 169604'''
+'''input shape and autoencoder architecture_3: 4004 -> 5000 -> 1000 -> 500 -> 250 -> 3 -> 250 -> 500 -> 1000 -> 5000 -> 4004'''
 m = tf.keras.Sequential()
-m.add(keras.layers.Dense(5000, activation='elu', input_shape = (169604,)))
+m.add(keras.layers.Dense(5000, activation='elu', input_shape = (int(merged_train_arrays.shape[1]),)))
 m.add(keras.layers.Dense(1000, activation='elu'))
 m.add(keras.layers.Dense(500, activation='elu'))
 m.add(keras.layers.Dense(250, activation='elu'))
@@ -69,20 +69,22 @@ m.add(keras.layers.Dense(250, activation='elu'))
 m.add(keras.layers.Dense(500, activation='elu'))
 m.add(keras.layers.Dense(1000, activation='elu'))
 m.add(keras.layers.Dense(5000, activation='elu'))
-m.add(keras.layers.Dense(169604, activation='sigmoid'))
+m.add(keras.layers.Dense(int(merged_train_arrays.shape[1]), activation='sigmoid'))
 
-'''input shape and autoencoder architecture_2: 169604 -> 5000 -> 1000 -> 500 -> 250 -> 2 -> 250 -> 500 -> 1000 -> 5000 -> 169604'''
-n = tf.keras.Sequential()
-n.add(keras.layers.Dense(5000, activation='elu', input_shape = (169604,)))
-n.add(keras.layers.Dense(1000, activation='elu'))
-n.add(keras.layers.Dense(500, activation='elu'))
-n.add(keras.layers.Dense(250, activation='elu'))
-n.add(keras.layers.Dense(2, activation='linear', name="code_layer"))
-n.add(keras.layers.Dense(250, activation='elu'))
-n.add(keras.layers.Dense(500, activation='elu'))
-n.add(keras.layers.Dense(1000, activation='elu'))
-n.add(keras.layers.Dense(5000, activation='elu'))
-n.add(keras.layers.Dense(169604, activation='sigmoid'))
+#'''input shape and autoencoder architecture_2: 169604 -> 5000 -> 1000 
+#-> 500 -> 250 -> 2 -> 250 -> 500 -> 1000 -> 5000 -> 169604'''
+#n = tf.keras.Sequential()
+#n.add(keras.layers.Dense(5000, activation='elu', input_shape = 
+#(int(merged_train_arrays.shape[1]),)))
+#n.add(keras.layers.Dense(1000, activation='elu'))
+#n.add(keras.layers.Dense(500, activation='elu'))
+#n.add(keras.layers.Dense(250, activation='elu'))
+#n.add(keras.layers.Dense(2, activation='linear', name="code_layer"))
+#n.add(keras.layers.Dense(250, activation='elu'))
+#n.add(keras.layers.Dense(500, activation='elu'))
+#n.add(keras.layers.Dense(1000, activation='elu'))
+#n.add(keras.layers.Dense(5000, activation='elu'))
+#n.add(keras.layers.Dense(int(merged_train_arrays.shape[1]), activation='sigmoid'))
 
 '''data_generator'''
 def generator(X, epochs, batchSize):
@@ -113,7 +115,8 @@ steps_per_epoch = math.ceil(int(merged_train_arrays.shape[0])/batchSize)
 
 '''compile'''
 m.compile(loss='mean_squared_error', optimizer=tf.train.AdamOptimizer())
-n.compile(loss='mean_squared_error', optimizer=tf.train.AdamOptimizer())
+#n.compile(loss='mean_squared_error', 
+#optimizer=tf.train.AdamOptimizer())
 print("compiled")
 
 '''fit'''
@@ -121,34 +124,37 @@ history = m.fit_generator(generator(merged_train_arrays, epochs, batchSize), epo
 
 print("3d fitted")
 
-history_n = n.fit_generator(generator(merged_train_arrays, epochs, batchSize), epochs=epochs, steps_per_epoch=steps_per_epoch, workers=0)
+#history_n = n.fit_generator(generator(merged_train_arrays, epochs, 
+#batchSize), epochs=epochs, steps_per_epoch=steps_per_epoch, workers=0)
 
-print("2d fitted")
+#print("2d fitted")
 
 '''3_dimensional visualization and reconstruction'''
 encoder = keras.Model(m.input, m.get_layer("code_layer").output)
 rep = encoder.predict(merged_train_arrays) #code_layer representation or 3_dimensional visualization
 #rec = m.predict(merged_train_arrays) #reconstruction
 
-'''2_dimensional visualizaiton and reconstruction'''
-encoder_n = keras.Model(n.input, n.get_layer("code_layer").output)
-rep_n = encoder_n.predict(merged_train_arrays) #code_layer representation or 2_dimensional visualization
+#'''2_dimensional visualizaiton and reconstruction'''
+#encoder_n = keras.Model(n.input, n.get_layer("code_layer").output)
+#rep_n = encoder_n.predict(merged_train_arrays) #code_layer 
+#representation or 2_dimensional visualization
 
 f = open("code_layer_3.npz", 'wb')
 np.savez(f, code_layer_rep = rep)
 print("Code layer 3-Dim file should be saved")
 
-f=open("code_layer_2.npz", 'wb')
-np.savez(f, code_layer_rep = rep_n)
-print("Code layer 2-Dim file should be saved")
+#f=open("code_layer_2.npz", 'wb')
+#np.savez(f, code_layer_rep = rep_n)
+#print("Code layer 2-Dim file should be saved")
 
-'''2D figure of autoencoder'''
-fig, ax = plt.figure(figsize=(25,25))
-image1 = ax.scatter(rep_n[:,0], rep_n[:,1], s=0.5, alpha = 0.5, c=X_labels_train_full, cmap='viridis')
-cbar1 = plt.colorbar(image1, ticks=np.arange(27))
-fig.suptitle("Autoencoder 2D clustering of IDEAS regions",fontsize=20)
-fig.savefig("2dautoencoder.png")
-plt.close(fig)
+#'''2D figure of autoencoder'''
+#fig, ax = plt.figure(figsize=(25,25))
+#image1 = ax.scatter(rep_n[:,0], rep_n[:,1], alpha = 0.5, 
+#c=X_labels_train_full, cmap='viridis')
+#cbar1 = plt.colorbar(image1, ticks=np.arange(27))
+#fig.suptitle("Autoencoder 2D clustering of IDEAS regions",fontsize=20)
+#fig.savefig("2dautoencoder.png")
+#plt.close(fig)
 
 '''rotating 3D figure of autoencoder'''
 fig = plt.figure(figsize=(25,25))
@@ -156,8 +162,8 @@ fig.suptitle("Autoencoder 3D clustering of IDEAS regions", fontsize = 20)
 ax = Axes3D(fig)
 
 def init():
-    im=ax.scatter(rep[:,0], rep[:,1], rep[:,2], s=0.5, alpha=0.5, cmap='viridis')
-    cbar = plt.colorbar(im, ticks=np.arange(27))
+    im=ax.scatter(rep[:,0], rep[:,1], rep[:,2], alpha=0.5, cmap='viridis')
+    cbar = plt.colorbar(im, ticks=np.arange(27), shrink=0.5)
     return fig,
 
 def animate(i):
@@ -170,8 +176,8 @@ print("mp4 should be saved")
 
 filename = 'trained_autoencoder_3dim'
 joblib.dump(m, filename)
-filename = 'trained_autoencoder_2dim'
-joblib.dump(n, filename)
+#filename = 'trained_autoencoder_2dim'
+#joblib.dump(n, filename)
 print("trained models should be saved")
 
 
