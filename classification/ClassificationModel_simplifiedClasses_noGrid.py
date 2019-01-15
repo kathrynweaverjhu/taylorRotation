@@ -19,7 +19,7 @@ from sklearn.externals import joblib
 
 '''loading saved numpy arrays of annotated data'''
 with np.load("savedMatrices_simplifiedClasses.npz") as npzfile:
-print(npzfile.files) #>['cellTypeIndex', 'labels', 'sequences', 'RNA_seq', 'ATAC_seq']
+    print(npzfile.files) #>['cellTypeIndex', 'labels', 'sequences', 'RNA_seq', 'ATAC_seq']
 
     cellTypeIndex = npzfile['cellTypeIndex']
     labels = npzfile['labels']
