@@ -86,26 +86,26 @@ print("test arrays should be saved")
 
 '''Tuning the model using RandomizedSearchCV while employing placeholders, an initializable iterator, and fit_generator to input large amounts of data'''
 #default params for nn_wrap class
-params = {'alpha':0.3, 
-          'filters':20, 
-          'kernel_size':6, 
-          'pool_size': 4, 
-          'strides':2, 
-          'activation': 'elu', 
+params = {'alpha':0.3,
+          'filters':20,
+          'kernel_size':6,
+          'pool_size': 4,
+          'strides':2,
+          'activation': 'elu',
           'epochs': 5,
           'batchSize': 32}
 
 #a hyperparameter grid for RandomizedSearchCV to sample from
-param_grid = {'alpha': [0.2,0.5,1,2], 
-              'filters': [20,30,60,90], 
+param_grid = {'alpha': [0.2,0.5,1,2],
+              'filters': [20,30,60,90],
               'kernel_size': [2,3,4,5,6,7,8,9,24,36,48,60],
-              'pool_size': [1,2,3,4,5,6,9,12], 
+              'pool_size': [1,2,3,4,5,6,9,12],
               'strides': [1,2,3,4,5,6] ,
-              'activation':['relu','elu'], 
+              'activation':['relu','elu'],
               'epochs':[4,5,6,7,8,9,10],
               'batchSize':[32,64,128]}
-              
-#wrapper class of custom sklearn estimator              
+
+#wrapper class of custom sklearn estimator
 #needs get_params and set_params methods which it inherits from sklearn.base.BaseEstimator; can inherit sklearn.base.ClassifierMixin score method if not defined
 class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
     def __init__(self, alpha, filters, kernel_size, activation, pool_size, strides, epochs, batchSize):
@@ -123,25 +123,25 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         self.hiddenNodes = 0
         self.batchSize = batchSize #higher accuracy when smaller
         self.steps_per_epoch = 1 #redefined in getInputArrayShape method = rounded up number of batches
-    
+
     '''This function runs and convolution and pooling methods on the input and returns the reduced array
         run prior to this function: instantiate tensor variables
         input: tensor
         output: tensor'''
     def convAndPool(self, X):
-        
-        convInput = tf.layers.conv1d(X, 
-                                     self.filters, 
-                                     self.kernel_size, 
-                                     padding = self.padding, 
+
+        convInput = tf.layers.conv1d(X,
+                                     self.filters,
+                                     self.kernel_size,
+                                     padding = self.padding,
                                      activation= self.activation)
-        
-        convInput = tf.layers.max_pooling1d(convInput, 
-                                            self.pool_size, 
-                                            self.strides, 
+
+        convInput = tf.layers.max_pooling1d(convInput,
+                                            self.pool_size,
+                                            self.strides,
                                             padding= self.padding)
         return (convInput)
-    
+
     '''This function computes the number of nodes so that the model can be instantiated before fully generating the data
         run prior to this funciton: self.getInputArrayShape()
         input: X,y (numpy arrays - data and labels respectively)
@@ -150,37 +150,37 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
     def computeNodes(self, X, y):
         input_numpyArray_shape = self.getInputArrayShape(X,y)
         print("computeNodes() print1: ",input_numpyArray_shape)
-        
+
         self.inputNodes = int(input_numpyArray_shape[1])
         self.hiddenNodes = math.ceil(int(input_numpyArray_shape[0])/
                                      (self.alpha*(self.inputNodes+self.outputNodes)))
-        
+
         print("inputNodes: ",self.inputNodes)
         print("hiddenNodes: ",self.hiddenNodes)
-    
+
     '''This function instantiates and compiles the model; notice, inputShape=numberOfFeatures, must be given to the input layer because I use the fit_generator function later
         run prior to this function: self.getInputArrayShape() and self.computeNodes()
         input: no direct input
         output: compiled nn or Sequential model
         '''
-        
+
     def model(self):
         nn = tf.keras.Sequential()
-        nn.add(keras.layers.Dense(self.inputNodes, 
-                                  activation=self.activation, 
+        nn.add(keras.layers.Dense(self.inputNodes,
+                                  activation=self.activation,
                                   input_shape=(int(self.inputShape[1]),)))
-        nn.add(keras.layers.Dense(self.hiddenNodes, 
+        nn.add(keras.layers.Dense(self.hiddenNodes,
                                   activation=self.activation))
-        nn.add(keras.layers.Dense(self.hiddenNodes, 
+        nn.add(keras.layers.Dense(self.hiddenNodes,
                                   activation=self.activation))
-        nn.add(keras.layers.Dense(self.outputNodes, 
+        nn.add(keras.layers.Dense(self.outputNodes,
                                   activation=tf.nn.softmax))
-        
-        nn.compile(optimizer=tf.train.AdamOptimizer(), 
-                   loss='sparse_categorical_crossentropy', 
+
+        nn.compile(optimizer=tf.train.AdamOptimizer(),
+                   loss='sparse_categorical_crossentropy',
                    metrics = ['accuracy'])
         return (nn)
-    
+
     '''This function runs the data through a barebones version of the generator function to ascertain what the inputArrayShape will be so that the model can be instantiated
         input: X,y (numpy arrays - data and labels respectively)
         output: defines self.steps_per_epoch (i.e. #_ofSamples/batchSize)
@@ -189,16 +189,16 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
     #This method is by far the most inefficient thing I coded, but I have to mimic the generator before actually running the generator - any suggestions for how I can make this more efficient?
     def getInputArrayShape(self,X,y):
         sess = tf.InteractiveSession()
-        
+
         placeholder = tf.placeholder(np.int32, shape=X.shape)
         dataset = tf.data.Dataset.from_tensor_slices((placeholder, y)).batch(self.batchSize)
-        
+
         self.steps_per_epoch = int(np.ceil(int(X.shape[0])/self.batchSize))
-        
+
         iterator = dataset.make_initializable_iterator()
         nextOutput = iterator.get_next()
         iterator.initializer.run(feed_dict = {placeholder:X})
-        
+
         tf.initialize_all_variables().run()
         features,labels = tf.get_default_session().run(nextOutput)
 
@@ -219,36 +219,36 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         tf.initialize_all_variables().run()
         flattenSeqNA = flattenSeq.eval()
 
-        input_numpyArray = np.concatenate((flattenSeqNA, 
-                                           RNAseq_array, 
-                                           ATACseq_array), 
+        input_numpyArray = np.concatenate((flattenSeqNA,
+                                           RNAseq_array,
+                                           ATACseq_array),
                                           axis=1).astype(np.int32)
-    
+
         sess.close()
         self.inputShape = input_numpyArray.shape
         print("inputShape: ",self.inputShape)
         return(input_numpyArray.shape)
-    
+
     '''This function generates the batched data for each epoch of the fit process
         run during fit_generator method
         input: X,y (numpy arrays, data and labels respectively)
         output: yields the batched input_numpyArray and its corresponding labels_array
         '''
-        
+
     def generator(self, X, y):
         print("generator 1", X.shape, "\n", y.shape)
         sess = tf.InteractiveSession() #interactive session becomes default session
-        
+
         placeholder = tf.placeholder(np.int32, shape=X.shape) #define a placeholder for the data
         dataset = tf.data.Dataset.from_tensor_slices((placeholder, y)).batch(self.batchSize) #define a dataset for the data and its labels batched according to batchSize
-        
+
         iterator = dataset.make_initializable_iterator() #define iterator
         nextOutput = iterator.get_next() #nextOutput will be a tensor with the data (nextOuput[0]) and the labels (nextOuput[1])
         iterator.initializer.run(feed_dict = {placeholder:X}) #initialize the iterator, feeding X to the placeholder in the dataset
         for epochs in range(self.epochs): #need to feed the batched data for each epoch
             try:
                 while True: #will repeat for each step in the epoch
-                    tf.initialize_all_variables().run() #deprecated command, but the only way that I could successfully evaluate the tensors to get features, labels numpy arrays was to use this command coupled with the next. If I feed the model the tensors instead of the numpy arrays - then the predict() ouput size issue occurs 
+                    tf.initialize_all_variables().run() #deprecated command, but the only way that I could successfully evaluate the tensors to get features, labels numpy arrays was to use this command coupled with the next. If I feed the model the tensors instead of the numpy arrays - then the predict() ouput size issue occurs
                     features,labels = tf.get_default_session().run(nextOutput)
 
                     #print(features.shape)
@@ -274,19 +274,19 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                     tf.initialize_all_variables().run() #with these two commands, return the flattened sequence tensor to a numpyArray
                     flattenSeqNA = flattenSeq.eval()
 
-                    input_numpyArray = np.concatenate((flattenSeqNA, 
-                                                       RNAseq_array, 
-                                                       ATACseq_array), 
+                    input_numpyArray = np.concatenate((flattenSeqNA,
+                                                       RNAseq_array,
+                                                       ATACseq_array),
                                                       axis=1).astype(np.int32)
-                    
+
                     print("generator 2", input_numpyArray.shape, "\n", labels_array.shape)
                     yield(input_numpyArray, labels_array)
 
             except tf.errors.OutOfRangeError:
                 iterator.initializer.run(feed_dict = {placeholder:X}) #re-initialize so that data can be rebatched for next epoch
-        
+
         sess.close()
-        
+
     '''This method works as the fit method
         runs: self.computeNodes(), self.model() (only once in order to compile the model) and nn.fit_generator
         input: X,y (numpy arrays - data and labels respectively)
@@ -294,47 +294,47 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                 returns self'''
     def fit(self, X, y):
         print("fit print 1: ", X.shape, "\n", y.shape)
-        
+
         self.computeNodes(X,y)
-        
+
         if self.needsCompiled == True:
 
             nn = self.model()
             self.needsCompiled = False
-        
-        checkpoint_path = '/home-3/kweave23@jhu.edu/work/users/kweave23/out/checkpoints/scaleDown1_simplifiedClasses_noGrid.ckpt'
-        
+
+        checkpoint_path = './classification/scaleDown1_simplifiedClasses_noGrid.ckpt'
+
         '''Create checkpoint callback'''
         cp_callback = tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True, verbose=1)
-        
-        
-        nn.fit_generator(self.generator(X,y), 
-                         epochs=self.epochs, 
-                         steps_per_epoch=self.steps_per_epoch, 
+
+
+        nn.fit_generator(self.generator(X,y),
+                         epochs=self.epochs,
+                         steps_per_epoch=self.steps_per_epoch,
                          workers = 0,
                          callbacks = [cp_callback])
-                         
+
         self.estimator = nn
-                
+
         return(self)
     '''This function is used for prediction and scoring of the estimator; it contains another sort of barebones data generator (doesn't have the for loop as no epochs)
         input: X,y (numpy arrays, data and labels respectivley)
         output: defines self.estimator.score = precision
                 returns this precision score as well
-        '''    
+        '''
     def score(self, X, y):
         print("Score print 1: ", X.shape)
-	    print("self.Parameters:\nalpha: ",self.alpha,"\nfilters: ",self.filters,"\nkernel_size: ",self.kernel_size,"\nactivation: ", self.activation, "\npool_size: ", self.pool_size, "\nstrides: ", self.strides, "\nepochs: ", self.epochs,"\ninputNodes: ", self.inputNodes, "\nhiddenNodes: ", self.hiddenNodes, "\nbatchSize: ", self.batchSize)
+        print("self.Parameters:\nalpha: ",self.alpha,"\nfilters: ",self.filters,"\nkernel_size: ",self.kernel_size,"\nactivation: ", self.activation, "\npool_size: ", self.pool_size, "\nstrides: ", self.strides, "\nepochs: ", self.epochs,"\ninputNodes: ", self.inputNodes, "\nhiddenNodes: ", self.hiddenNodes, "\nbatchSize: ", self.batchSize)
         all_pred_y = []
         all_true_y = []
         instance_len = []
         total_instances = 0
-        
+
         sess = tf.InteractiveSession()
-        
+
         placeholder = tf.placeholder(np.int32, shape=X.shape)
         dataset = tf.data.Dataset.from_tensor_slices((placeholder, y)).batch(self.batchSize)
-        
+
         iterator = dataset.make_initializable_iterator()
         nextOutput = iterator.get_next()
         iterator.initializer.run(feed_dict = {placeholder:X})
@@ -366,26 +366,26 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                 tf.initialize_all_variables().run()
                 flattenSeqNA = flattenSeq.eval()
 
-                input_numpyArray2 = np.concatenate((flattenSeqNA, 
-                                                   RNAseq_array, 
-                                                   ATACseq_array), 
+                input_numpyArray2 = np.concatenate((flattenSeqNA,
+                                                   RNAseq_array,
+                                                   ATACseq_array),
                                                   axis=1).astype(np.int32)
 
                 print("Score print 3", input_numpyArray2.shape, "\n", labels_array.shape)
 
                 pred_y = self.estimator.predict(input_numpyArray2)
-                
+
                 total_instances += int(pred_y.shape[0])
                 instance_len.append(int(pred_y.shape[0]))
                 all_pred_y.append(pred_y)
                 all_true_y.append(labels)
-                
+
                 print("Score print 4: ", pred_y.shape)
-        
+
         except tf.errors.OutOfRangeError:
             pass
-        
-         
+
+
         '''compute accuracy'''
         y_pred = []
 	    y_true = []
@@ -394,24 +394,24 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
             for j in range(instance_len[i]):
                 predicted = np.argmax(all_pred_y[i][j,:])
                 y_pred.append(predicted)
-		true = int(all_true_y[i][j])
-		y_true.append(true)
+                true = int(all_true_y[i][j])
+                y_true.append(true)
 		if predicted == true:
-                    correct_pred += 1
+            correct_pred += 1
 
         accuracy = (correct_pred/total_instances)*100
         print("score print 5: ", accuracy)
         self.estimator.score = accuracy
 	    self.y_pred = y_pred
-	    self.y_true = y_true    
-        
+	    self.y_true = y_true
+
 
         sess.close()
         return(self.estimator.score)
 
     def predict(self, X, y):
-	    accuracy = self.score(X,y)
-	
+        accuracy = self.score(X,y)
+
 	    '''confusion_matrix'''
         confusion_matrix = skm.confusion_matrix(self.y_true, self.y_pred)
 
@@ -434,7 +434,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         for i in range(num_classes):
             precision[i], recall[i], _ = skm.precision_recall_curve(y_true[:,i], y_pred[:,i])
             average_precision[i] = skm.average_precision_score(y_true[:,i], y_pred[:,i])
-            fpr[i], tpr[i], _ = skm.roc_curve(y_true[:,i], y_pred[:,i])    
+            fpr[i], tpr[i], _ = skm.roc_curve(y_true[:,i], y_pred[:,i])
             roc_auc[i] = skm.auc(fpr[i], tpr[i])
 
         '''A micro-average - quantifing score on all classes jointly'''
@@ -460,12 +460,11 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         fpr["macro"] = all_fpr
         tpr["macro"] = mean_tpr
         roc_auc["macro"] = skm.auc(fpr["macro"], tpr["macro"])
-	
-	    return(accuracy, confusion_matrix, classification_report, precision, recall, fpr, tpr, roc_auc, average_precision)
+        return(accuracy, confusion_matrix, classification_report, precision, recall, fpr, tpr, roc_auc, average_precision)
 
 train_full_nn=nn_wrap(**params)
 print("-----------WRAPPER INSTANTIATED-------------")
-#rsearch = sms.RandomizedSearchCV(estimator = train_full_nn, param_distributions=param_grid, n_iter=6) 
+#rsearch = sms.RandomizedSearchCV(estimator = train_full_nn, param_distributions=param_grid, n_iter=6)
 #rsearch.fit(merged_train_arrays, X_labels_train_full)
 train_full_nn.fit(merged_train_arrays, X_labels_train_full)
 print("----------FIT-----------")
@@ -560,9 +559,9 @@ print("ROC-AUC all classes plotted")
 '''Confusion matrix with number labels'''
 def plot_confusion_matrix(cm, labeling=True, normalize=False, title='Confusion Matrix', cmap='Greys'):
     if normalize:
-	    cm = cm.astype('float')/cm.sum(axis=1)[:,np.newaxis]
-	    print("Normalized confusion matrix")
-    
+        cm = cm.astype('float')/cm.sum(axis=1)[:,np.newaxis]
+        print("Normalized confusion matrix")
+
     m = np.max(np.abs(cm))
     vmin = 0 if normalize else -1*m
     fig, ax = plt.subplots(figsize=(16,14))
@@ -578,12 +577,12 @@ def plot_confusion_matrix(cm, labeling=True, normalize=False, title='Confusion M
 
     for i,j in itertools.product(range(int(cm.shape[0])), range(int(cm.shape[1]))):
         if cmap == 'Greys':
-	        color ='white' if cm[i,j] > thresh else 'black'
-	    elif cmap == 'viridis':
-	        color = 'black' if cm[i,j] > thresh else 'white'
-	    if labeling:
-	        plt.text(j+0.5,i+0.5, format(cm[i,j],fmt), horizontalalignment='center', verticalalignment = 'center', color=color)
-    
+            color ='white' if cm[i,j] > thresh else 'black'
+        elif cmap == 'viridis':
+            color = 'black' if cm[i,j] > thresh else 'white'
+        if labeling:
+            plt.text(j+0.5,i+0.5, format(cm[i,j],fmt), horizontalalignment='center', verticalalignment = 'center', color=color)
+
     ax.set_ylabel('True label', fontsize=20)
     ax.set_xlabel('Predicted label', fontsize=20)
     plt.tight_layout()
