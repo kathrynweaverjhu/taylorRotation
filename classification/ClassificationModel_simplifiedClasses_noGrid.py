@@ -388,7 +388,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
          
         '''compute accuracy'''
         y_pred = []
-	    y_true = []
+		y_true = []
         correct_pred = 0
         for i in range(len(all_pred_y)):
             for j in range(instance_len[i]):
@@ -397,7 +397,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
 		true = int(all_true_y[i][j])
 		y_true.append(true)
 		if predicted == true:
-                    correct_pred += 1
+			correct_pred += 1
 
         accuracy = (correct_pred/total_instances)*100
         print("score print 5: ", accuracy)
@@ -410,10 +410,10 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         return(self.estimator.score)
 
     def predict(self, X, y):
-	    accuracy = self.score(X,y)
+		accuracy = self.score(X,y)
 	
-	    '''confusion_matrix'''
-        confusion_matrix = skm.confusion_matrix(self.y_true, self.y_pred)
+		'''confusion_matrix'''
+		confusion_matrix = skm.confusion_matrix(self.y_true, self.y_pred)
 
         '''classification_report'''
         classification_report = skm.classification_report(self.y_true, self.y_pred)
@@ -461,7 +461,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         tpr["macro"] = mean_tpr
         roc_auc["macro"] = skm.auc(fpr["macro"], tpr["macro"])
 	
-	    return(accuracy, confusion_matrix, classification_report, precision, recall, fpr, tpr, roc_auc, average_precision)
+		return(accuracy, confusion_matrix, classification_report, precision, recall, fpr, tpr, roc_auc, average_precision)
 
 train_full_nn=nn_wrap(**params)
 print("-----------WRAPPER INSTANTIATED-------------")
@@ -560,9 +560,8 @@ print("ROC-AUC all classes plotted")
 '''Confusion matrix with number labels'''
 def plot_confusion_matrix(cm, labeling=True, normalize=False, title='Confusion Matrix', cmap='Greys'):
     if normalize:
-	    cm = cm.astype('float')/cm.sum(axis=1)[:,np.newaxis]
-	    print("Normalized confusion matrix")
-    
+	cm = cm.astype('float')/cm.sum(axis=1)[:,np.newaxis]
+	print("Normalized confusion matrix")
     m = np.max(np.abs(cm))
     vmin = 0 if normalize else -1*m
     fig, ax = plt.subplots(figsize=(16,14))
@@ -578,11 +577,11 @@ def plot_confusion_matrix(cm, labeling=True, normalize=False, title='Confusion M
 
     for i,j in itertools.product(range(int(cm.shape[0])), range(int(cm.shape[1]))):
         if cmap == 'Greys':
-	        color ='white' if cm[i,j] > thresh else 'black'
-	    elif cmap == 'viridis':
-	        color = 'black' if cm[i,j] > thresh else 'white'
-	    if labeling:
-	        plt.text(j+0.5,i+0.5, format(cm[i,j],fmt), horizontalalignment='center', verticalalignment = 'center', color=color)
+	    color ='white' if cm[i,j] > thresh else 'black'
+	elif cmap == 'viridis':
+		color = 'black' if cm[i,j] > thresh else 'white'
+	if labeling:
+		plt.text(j+0.5,i+0.5, format(cm[i,j],fmt), horizontalalignment='center', verticalalignment = 'center', color=color)
     
     ax.set_ylabel('True label', fontsize=20)
     ax.set_xlabel('Predicted label', fontsize=20)
