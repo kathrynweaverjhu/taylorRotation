@@ -388,7 +388,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
 
         '''compute accuracy'''
         y_pred = []
-		y_true = []
+        y_true = []
         correct_pred = 0
         for i in range(len(all_pred_y)):
             for j in range(instance_len[i]):
@@ -396,8 +396,8 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                 y_pred.append(predicted)
                 true = int(all_true_y[i][j])
                 y_true.append(true)
-		if predicted == true:
-            correct_pred += 1
+                if predicted == true:
+                    correct_pred += 1
 
         accuracy = (correct_pred/total_instances)*100
         print("score print 5: ", accuracy)
