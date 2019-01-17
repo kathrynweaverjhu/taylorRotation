@@ -505,7 +505,7 @@ lines=[]
 labels=[]
 l,=plt.plot(recall['micro'], precision=['micro'], color='gold', lw=2)
 lines.append(l)
-labels.append('micro-average precision-recall (area={1:0.2f})'''.format(i,average_precision[i]))
+labels.append('micro-average Precision-recall')
 
 for i, color in zip(range(num_classes), colors):
 	l, = plt.plot(recall[i], precision[i], color=color, lw=2)
