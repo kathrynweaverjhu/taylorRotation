@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse as ap
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -7,18 +8,35 @@ from mpl_toolkits.mplot3d import Axes3D
 import sklearn.model_selection as sms
 import tensorflow as tf
 from tensorflow import keras
-from sklearn.externals import joblib 
+from sklearn.externals import joblib
+
+parser=ap.ArgumentParser(description='autoencoder with 2dim code layer')
+parser.add_argument('--SavedMatricesFile', action=store, nargs=1, type = str, required=True, help='Filename/path where saved preprocessed matrices are - should be an npz extension')
+parser.add_argument('--TestArrays', action=store, nargs=1, type=str, required=True, help='Where to store test arrays')
+parser.add_argument('--epochs', action=store, nargs=1, type=int, required=False, default=[6], help='Number of epochs')
+parser.add_argument('--batchSize', action=store, nargs=1, type=int, required=False, default=[32], help='Batch size')
+parser.add_argument('--codeLayer', action=store, nargs=1, type=str, required=True, help='npz file to store code layer in')
+parser.add_argument('--plotName_Description', action=store, nargs=1, type=str, required=False, default=[''], help='suffix for plot names if desired')
+parser.add_argument('--CheckpointPath', action='store', nargs=1, type=str, required = True, help='Filepath of where to save training checkpoints - suggested ckpt extension - ex:''/home-3/kweave23@jhu.edu/work/users/kweave23/out/checkpoints/scaleDown1_simplifiedClasses.ckpt''')
+args=parser.parse_args()
+savedMatrices = args.SavedMatricesFile[0]
+testArrays = args.TestArrays[0]
+epochs = args.epochs[0]
+batchSize = args.batchSize[0]
+codeLayerFile = args.codeLayer[0]
+plotName = args.plotName_Description[0]
+checkpointPath = args.CheckpointPath[0]
 
 print("Hello")
 '''loading saved matrices of annotated data'''
-npzfile = np.load("/home-3/kweave23@jhu.edu/work/users/kweave23/out/savedMatrices.npz")
-print(npzfile.files)
+with np.load(savedMatrices) as npzfile:
+    print(npzfile.files)
 
-cellTypeIndex = npzfile['cellTypeIndex']
-labels = npzfile['labels']
-sequences = npzfile['sequences']
-RNA_seq = npzfile['RNA_seq']
-ATAC_seq = npzfile['ATAC_seq']
+    cellTypeIndex = npzfile['cellTypeIndex']
+    labels = npzfile['labels']
+    sequences = npzfile['sequences']
+    RNA_seq = npzfile['RNA_seq']
+    ATAC_seq = npzfile['ATAC_seq']
 
 print("Loaded")
 
@@ -53,7 +71,7 @@ print("merged_test_array_shape: ", merged_test_arrays.shape)
 X_labels_train_full = X_labels_train_full.astype(np.int32)
 X_labels_test = X_labels_test.astype(np.int32)
 
-f = open('testArraysCluster_2d.npz', 'wb')
+f = open(testArrays, 'wb')
 np.savez(f, Y_cellTypeIndex_test = Y_cellTypeIndex_test, X_labels_test = X_labels_test, merged_test_arrays = merged_test_arrays)
 f.close()
 print("testArrays file should be saved")
@@ -87,10 +105,10 @@ n.add(keras.layers.Dense(int(merged_train_arrays.shape[1]), activation='sigmoid'
 '''data_generator'''
 def generator(X, epochs, batchSize):
     sess = tf.InteractiveSession()
-        
+
     placeholder = tf.placeholder(tf.int32, shape=X.shape)
     dataset = tf.data.Dataset.from_tensor_slices((placeholder)).batch(batchSize)
-        
+
     iterator = dataset.make_initializable_iterator()
     nextOutput = iterator.get_next()
     iterator.initializer.run(feed_dict = {placeholder:X})
@@ -103,12 +121,10 @@ def generator(X, epochs, batchSize):
                 yield(nextSet, nextSet)
         except tf.errors.OutOfRangeError:
             iterator.initializer.run(feed_dict = {placeholder:X})
-        
+
     sess.close()
 
 '''hyperparameters'''
-epochs = 6
-batchSize = 256
 steps_per_epoch = math.ceil(int(merged_train_arrays.shape[0])/batchSize)
 
 '''compile'''
@@ -116,12 +132,16 @@ steps_per_epoch = math.ceil(int(merged_train_arrays.shape[0])/batchSize)
 n.compile(loss='mean_squared_error', optimizer=tf.train.AdamOptimizer())
 print("compiled")
 
-'''fit'''
+
 #history = m.fit_generator(generator(merged_train_arrays, epochs, batchSize), epochs=epochs, steps_per_epoch=steps_per_epoch, workers=0)
 
 #print("3d fitted")
+checkpoint_path = checkpointPath
 
-history_n = n.fit_generator(generator(merged_train_arrays, epochs, batchSize), epochs=epochs, steps_per_epoch=steps_per_epoch, workers=0)
+'''Create checkpoint callback'''
+cp_callback = tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True, verbose=1)
+'''fit'''
+history_n = n.fit_generator(generator(merged_train_arrays, epochs, batchSize), epochs=epochs, steps_per_epoch=steps_per_epoch, workers=0, callbacks = [cp_callback])
 
 print("2d fitted")
 
@@ -138,7 +158,7 @@ rep_n = encoder_n.predict(merged_train_arrays) #code_layer representation or 2_d
 #np.savez(f, code_layer_rep = rep)
 #print("Code layer 3-Dim file should be saved")
 
-f=open("code_layer_2.npz", 'wb')
+f=open(codeLayerFile, 'wb')
 np.savez(f, code_layer_rep = rep_n)
 print("Code layer 2-Dim file should be saved")
 
@@ -147,7 +167,8 @@ fig, ax = plt.figure(figsize=(25,25))
 image1 = ax.scatter(rep_n[:,0], rep_n[:,1], alpha = 0.5, c=X_labels_train_full, cmap='viridis')
 cbar1 = plt.colorbar(image1, ticks=np.arange(27))
 fig.suptitle("Autoencoder 2D clustering of IDEAS regions",fontsize=20)
-fig.savefig("2dautoencoder.png")
+figname='2dautoencoder_{}.png'.format(plotName)
+fig.savefig(figname)
 plt.close(fig)
 
 #'''rotating 3D figure of autoencoder'''
@@ -170,8 +191,5 @@ plt.close(fig)
 
 #filename = 'trained_autoencoder_3dim'
 #joblib.dump(m, filename)
-filename = 'trained_autoencoder_2dim'
-joblib.dump(n, filename)
-print("trained models should be saved")
-
-
+#filename = 'trained_autoencoder_2dim'
+#joblib.dump(n, filename)
