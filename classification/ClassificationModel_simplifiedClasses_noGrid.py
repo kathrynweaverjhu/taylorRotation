@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse as ap
 import numpy as np
 import math
 import itertools
@@ -14,11 +15,24 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from sklearn.externals import joblib
 
-'''Usage: ./ClassificationModel_simplifiedClasses.py
+'''Usage: ./ClassificationModel_simplifiedClasses_noGrid.py --SavedMatricesFile --CheckpointPath --TestArrays [--desiredScalingFactor] [--plotName_description]
 		to be run following tensorMatrix_simplifyClasses.py'''
 
+parser = ap.ArgumentParser(description='Training randomly subsampled data (with simplified classes) WITHOUT hyperparameter optimization')
+parser.add_argument('--SavedMatricesFile', action='store', nargs=1, type=str, required = True, help='Filename/path where saved preprocessed matrices are - should be an npz extension')
+parser.add_argument('--CheckpointPath', action='store', nargs=1, type=str, required = True, help='Filepath of where to save training checkpoints - suggested ckpt extension - ex:''/home-3/kweave23@jhu.edu/work/users/kweave23/out/checkpoints/scaleDown1_simplifiedClasses.ckpt''')
+parser.add_argument('--TestArrays', action='store', nargs=1, type=str, required=True, help='Filename/path for where you want to save the generated test arrays - suggested npz extension')
+parser.add_argument('--desiredScalingFactor', action='store', nargs=1, type=float, required=False, default=[1e3], help='scaling factor to use for subsampling data'  )
+parser.add_argument('--plotName_description', action='store', nargs=1, type=str, required=False, default =[''], help='any description you would like added to the end of the plot files before the extension')
+args=parser.parse_args()
+savedMatrices = args.SavedMatricesFile[0]
+checkpointPath = args.CheckpointPath[0]
+testArrays = args.TestArrays[0]
+scaling_factor = args.desiredScalingFactor[0]
+plotName = args.plotName_description[0]
+
 '''loading saved numpy arrays of annotated data'''
-with np.load("savedMatrices_simplifiedClasses.npz") as npzfile:
+with np.load(savedMatrices) as npzfile:
 	print(npzfile.files) #>['cellTypeIndex', 'labels', 'sequences', 'RNA_seq', 'ATAC_seq']
 
 	cellTypeIndex = npzfile['cellTypeIndex']
@@ -28,7 +42,6 @@ with np.load("savedMatrices_simplifiedClasses.npz") as npzfile:
 	ATAC_seq = npzfile['ATAC_seq']
 
 '''subsampling data'''
-scaling_factor = 1e3
 print("Scaling_factor for subsampling: ", scaling_factor)
 indices = np.random.choice(np.arange(int(cellTypeIndex.shape[0])), size=int(scaling_factor))
 cellTypeIndex = cellTypeIndex[indices]
@@ -78,7 +91,7 @@ X_labels_train_full = X_labels_train_full.astype(np.int32)
 X_labels_test = X_labels_test.astype(np.int32)
 
 '''save test and train arrays'''
-f = open('testArrays_simplifiedClasses_noGrid.npz', 'wb')
+f = open(testArrays, 'wb')
 np.savez(f, Y_cellTypeIndex_test = Y_cellTypeIndex_test, X_labels_test = X_labels_test, merged_test_arrays = merged_test_arrays)
 f.close()
 
@@ -302,7 +315,7 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
 			nn = self.model()
 			self.needsCompiled = False
 
-		checkpoint_path = './classification/scaleDown1_simplifiedClasses_noGrid.ckpt'
+		checkpoint_path = checkpointPath
 
 		'''Create checkpoint callback'''
 		cp_callback = tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True, verbose=1)
@@ -469,10 +482,6 @@ print("-----------WRAPPER INSTANTIATED-------------")
 train_full_nn.fit(merged_train_arrays, X_labels_train_full)
 print("----------FIT-----------")
 
-filename = 'VISION_classification_trained_estimator_simplifiedClasses_noGrid'
-joblib.dump(train_full_nn, filename)
-print("trained estimator should be saved")
-
 '''predict test data and get metrics'''
 accuracy, confusion_matrix, classification_report, precision, recall, fpr, tpr, roc_auc, average_precision = train_full_nn.predict(merged_test_arrays, X_labels_test)
 print("-----------PREDICTED--------------")
@@ -493,9 +502,10 @@ plt.ylabel("Precision")
 plt.ylim([0.0,1.05])
 plt.xlim([0.0,1.0])
 fig.suptitle("Average precision score, micro-averaged over all classes: AP={0:0.2f}".format(average_precision['micro']))
-fig.savefig("micro-averaged_precision-recall_nogrid.png")
+figname = "microaveraged_precision-recall_{}.png".format(plotName)
+fig.savefig(figname)
 plt.close(fig)
-print('micro-averaged precision/recall curve plotted')
+print('microaveraged precision/recall curve plotted and saved as {}'.format(figname))
 
 '''plot the precision/recall curve for each class'''
 colors = itertools.cycle(['navy', 'deeppink', 'darkslategray', 'darkorchid', 'saddlebrown','darkgreen', 'darkturquoise'])
@@ -519,9 +529,10 @@ plt.ylabel("Precision")
 fig.suptitle('Precision-Recall Curves')
 plt.legend(lines, labels, loc='upper right', prop=dict(size=12))
 plt.tight_layout()
-fig.savefig("Precision_Recall_nogrid.png")
+figname='Precision_Recall_{}.png'.format(plotName)
+fig.savefig(figname)
 plt.close(fig)
-print("precision/recall curve for each class plotted")
+print("precision/recall curve for each class plotted and saved as {}".format(figname))
 
 '''Plot the ROC-AUC - only micro and macro'''
 fig, ax = plt.subplots(figsize=(18,15))
@@ -533,9 +544,10 @@ plt.xlabel('False Positive Rate', fontsize=15)
 plt.ylabel('True Positive Rate', fontsize=15)
 fig.suptitle('Receiver operating characteristic', fontsize=15)
 plt.legend(loc='lower right')
-fig.savefig("ROC_AUC_micro_macroOnly_nogrid.png")
+figname="ROC_AUC_micro_macroOnly_{}.png".format(plotName)
+fig.savefig(figname)
 plt.close(fig)
-print("ROC-AUC for micro and macro only plotted")
+print("ROC-AUC for micro and macro only plotted and saved as {}".format(figname))
 
 '''plot the ROC-AUC all curves'''
 fig,ax = plt.subplots(figsize=(10,10))
@@ -552,9 +564,10 @@ plt.xlabel('False Positive Rate', fontsize=15)
 plt.ylabel('True Positive Rate', fontsize=15)
 fig.suptitle("Receiver Operating Characteristic", fontsize=15)
 plt.legend(loc='lower right', prop=dict(size=7))
-fig.savefig("ROC_AUC_all_nogrid.png")
+figname = 'ROC_AUC_all_{}.png'.format(plotName)
+fig.savefig(figname)
 plt.close(fig)
-print("ROC-AUC all classes plotted")
+print("ROC-AUC all classes plotted and saved as {}".format(figname))
 
 '''Confusion matrix with number labels'''
 def plot_confusion_matrix(cm, labeling=True, normalize=False, title='Confusion Matrix', cmap='Greys'):
@@ -586,9 +599,10 @@ def plot_confusion_matrix(cm, labeling=True, normalize=False, title='Confusion M
 	ax.set_ylabel('True label', fontsize=20)
 	ax.set_xlabel('Predicted label', fontsize=20)
 	plt.tight_layout()
-
-	fig.savefig("confusion_matrix_cmap_{}_normalize_{}_sqlabeling_{}_numberLabels.png".format(cmap, normalize, labeling))
+	figname = "confusion_matrix_cmap_{}_normalize_{}_sqlabeling_{}_numberLabels_{}.png".format(cmap, normalize, labeling, plotName)
+	fig.savefig(figname)
 	plt.close(fig)
+	print("confusion matrix plotted and saved as {}".format(figname))
 
 plot_confusion_matrix(confusion_matrix, normalize=True, cmap='viridis')
 plot_confusion_matrix(confusion_matrix, normalize=True)

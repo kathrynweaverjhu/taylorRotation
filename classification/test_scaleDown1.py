@@ -15,17 +15,19 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 
-'''Usage ./test_scaleDown1.py --SavedModelFile saved_model_ext --TestDataFile test_data --LastCheckpoint last_checkpoint'''
+'''Usage ./test_scaleDown1.py --SavedModelFile saved_model_ext --TestDataFile test_data --LastCheckpoint last_checkpoint [--plotName_description]'''
 
 parser = ap.ArgumentParser(description='Testing a PreTrained Model')
-parser.add_argument('--SavedModelFile', action='store', nargs=1, type=str, required = True, help='Filename for saved model')
+parser.add_argument('--SavedModelFile', action='store', nargs=1, type=str, required = False,  default='',help='Filename for saved model')
 parser.add_argument('--TestDataFile', action='store', nargs=1, type=str, required = True, help="Filename for saved test data")
 parser.add_argument('--LastCheckpoint', action='store', nargs=1, type=str, required= True, help ='Filename for last training checkpoint')
+parser.add_argument('--plotName_description', action='store', nargs=1, type=str, required=False, default =[''], help='any description you would like added to the end of the plot files before the extension')
 args=parser.parse_args()
 
 model_ext = args.SavedModelFile[0] #Turns out I can't get the pickle-ing to work properly for this right now....
 test_data_file = args.TestDataFile[0]
 checkpoint = args.LastCheckpoint[0]
+plotName = args.plotName_description[0]
 
 
 '''This nn_wrap is different from the nn_wrap used for classification in ClassificationModel_*.py scripts
@@ -462,7 +464,9 @@ def plot_confusion_matrix(cm, labeling=True, normalize=False, title='Confusion M
 	ax.set_xlabel('Predicted label', fontsize=20)
 	plt.tight_layout()
 
-	fig.savefig("confusion_matrix_cmap_{}_normalize_{}_sqlabeling_{}_numberLabels.png".format(cmap, normalize, labeling))
+	figname = "confusion_matrix_cmap_{}_normalize_{}_sqlabeling_{}_numberLabels_{}.png".format(cmap, normalize, labeling, plotName)
+	fig.savefig(figname)
+	print("confusion matrix is plotted and saved as {}".format(figname))
 	plt.close(fig)
 
 plot_confusion_matrix(confusion_matrix, normalize=True, cmap='viridis')
@@ -489,7 +493,9 @@ plt.xlim([0.0, 1.0])
 fig.suptitle(
     'Average precision score, micro-averaged over all classes: AP={0:0.2f}'
     .format(average_precision["micro"]))
-fig.savefig("micro-averaged_precision_recall.png")
+figname = "micro-averaged_precision_recall_{}.png".format(plotName)
+fig.savefig(figname)
+print("microaveraged precision recall curve is plotted and saved as {}".format(figname))
 plt.close(fig)
 
 print("plotting the precision/recall curve for each class")
@@ -515,7 +521,9 @@ plt.ylabel("Precision")
 fig.suptitle('Precision-Recall Curve')
 plt.legend(lines, labels, loc='upper right', prop=dict(size=12))
 plt.tight_layout()
-fig.savefig("Precision_Recall_testScaleDown1.png")
+figname = "Precision_Recall_testScaleDown1_{}.png".format(plotName)
+fig.savefig(figname)
+print("precision recall curve for each class is plotted and saved as {}".format(figname))
 plt.close(fig)
 
 print("plotting the ROC-AUC curves")
@@ -537,7 +545,9 @@ plt.xlabel('False Positive Rate', fontsize=15)
 plt.ylabel('True Positive Rate', fontsize=15)
 fig.suptitle('Receiver operating characteristic', fontsize=15)
 plt.legend(loc="lower right")
-fig.savefig("ROC_AUC_micro_macroOnly_testScaleDown1.png")
+figname = "ROC_AUC_micro_macroOnly_{}.png".format(plotName)
+fig.savefig(figname)
+print("ROC AUC for micro and macro only is plotted and saved as {}".format(figname))
 plt.close(fig)
 
 # Plot all ROC curves
@@ -564,6 +574,8 @@ plt.xlabel('False Positive Rate', fontsize=15)
 plt.ylabel('True Positive Rate', fontsize=15)
 fig.suptitle('Receiver operating characteristic', fontsize=15)
 plt.legend(loc="lower right", prop=dict(size=7))
-fig.savefig("ROC_AUC_testScaleDown1.png")
+figname = "ROC_AUC_{}.png".format(plotName)
+fig.savefig(figname)
+print("ROC AUC for all classes is plotted and saved as {}".format(figname))
 plt.close(fig)
 print("-------End Metrics------")

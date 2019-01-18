@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse as ap
 import numpy as np
 import math
 import sklearn.base as skb
@@ -9,11 +10,26 @@ import tensorflow as tf
 from tensorflow import keras
 from sklearn.externals import joblib
 
-'''Usage: ./ClassificationModel_simplifiedClasses.py
-        to be run following tensorMatrix_simplifyClasses.py'''
+'''Usage: ./ClassificationModel_simplifiedClasses.py --SavedMatricesFile --CheckpointPath --TestArrays --dumpBestEstimator [--n_iter_RSCV] [--desiredScalingFactor]
+        to be run following tensorMatrix_simplifyClasses.py using the savedMatricesFile from that script'''
+parser = ap.ArgumentParser(description='Training randomly subsampled data (with simplified classes) with hyperparameter optimization by RandomizedSearchCV')
+parser.add_argument('--SavedMatricesFile', action='store', nargs=1, type=str, required = True, help='Filename/path where saved preprocessed matrices are - should be an npz extension')
+parser.add_argument('--CheckpointPath', action='store', nargs=1, type=str, required = True, help='Filepath of where to save training checkpoints - suggested ckpt extension - #ex:''/home-3/kweave23@jhu.edu/work/users/kweave23/out/checkpoints/scaleDown1_simplifiedClasses_refinedGrid_{}_{}_{}_{}.ckpt''.format(self.epochs, self.hiddenNodes, self.inputShape, self.alpha)')
+parser.add_argument('--TestArrays', action='store', nargs=1, type=str, required=True, help='Filename/path for where you want to save the generated test arrays - suggested npz extension')
+parser.add_argument('--n_iter_RSCV', action='store', nargs=1, type=int, required=False, default=[10], help='number of iterations that RandomizedSearchCV should run')
+parser.add_argument('--dumpBestEstimator', action='store', nargs=1, type=str, required=True, help='Filename/path of where to save the dumped RSCV.best_estimator_')
+parser.add_argument('--desiredScalingFactor', action='store', nargs=1, type=float, required=False, default=[1e3], help='scaling factor to use for subsampling data'  )
+args=parser.parse_args()
+savedMatrices = args.SavedMatricesFile[0]
+checkpointPath = args.CheckpointPath[0]
+testArrays = args.TestArrays[0]
+n_iter_RSCV = args.n_iter_RSCV[0]
+bestEstimator = args.dumpBestEstimator[0]
+scaling_factor = args.desiredScalingFactor[0]
+
 
 '''loading saved numpy arrays of annotated data'''
-with np.load("savedMatrices_simplifiedClasses.npz") as npzfile:
+with np.load(savedMatrices) as npzfile:
 #print(npzfile.files) #>['cellTypeIndex', 'labels', 'sequences', 'RNA_seq', 'ATAC_seq']
 
     cellTypeIndex = npzfile['cellTypeIndex']
@@ -23,7 +39,6 @@ with np.load("savedMatrices_simplifiedClasses.npz") as npzfile:
     ATAC_seq = npzfile['ATAC_seq']
 
 '''subsampling data'''
-scaling_factor = 1e3
 indices = np.random.choice(np.arange(int(cellTypeIndex.shape[0])), size=int(scaling_factor))
 cellTypeIndex = cellTypeIndex[indices]
 labels = labels[indices]
@@ -66,7 +81,7 @@ X_labels_train_full = X_labels_train_full.astype(np.int32)
 X_labels_test = X_labels_test.astype(np.int32)
 
 '''save test and train arrays'''
-f = open('testArrays_simplifiedClasses.npz', 'wb')
+f = open(testArrays, 'wb')
 np.savez(f, Y_cellTypeIndex_test = Y_cellTypeIndex_test, X_labels_test = X_labels_test, merged_test_arrays = merged_test_arrays)
 f.close()
 #f = open('trainArrays.npz', 'wb')
@@ -76,26 +91,26 @@ print("test arrays should be saved")
 
 '''Tuning the model using RandomizedSearchCV while employing placeholders, an initializable iterator, and fit_generator to input large amounts of data'''
 #default params for nn_wrap class
-params = {'alpha':1, 
-          'filters':300, 
-          'kernel_size':7, 
-          'pool_size': 3, 
-          'strides':2, 
-          'activation': 'elu', 
+params = {'alpha':1,
+          'filters':300,
+          'kernel_size':7,
+          'pool_size': 3,
+          'strides':2,
+          'activation': 'elu',
           'epochs': 6,
           'batchSize': 500}
 
 #a hyperparameter grid for RandomizedSearchCV to sample from
-param_grid = {'alpha': [0.1,0.2,0.3,0.4,0.5,1,2,3,4,5,6,7,8,9,10], 
-              'filters': [10,30,60,90,150,300,600], 
+param_grid = {'alpha': [0.1,0.2,0.3,0.4,0.5,1,2,3,4,5,6,7,8,9,10],
+              'filters': [10,30,60,90,150,300,600],
               'kernel_size': [2,3,4,5,6,7,8,9,24,36,48,60],
-              'pool_size': [1,2,3,4,5,6,9,12], 
+              'pool_size': [1,2,3,4,5,6,9,12],
               'strides': [1,2,3,4,5,6] ,
-              'activation':['relu','elu'], 
+              'activation':['relu','elu'],
               'epochs':[2,3,4,5,6,7,8,9,10,20],
               'batchSize':[32,64,128,256,500]}#,750,1000,1500,2000]}
-              
-#wrapper class of custom sklearn estimator              
+
+#wrapper class of custom sklearn estimator
 #needs get_params and set_params methods which it inherits from sklearn.base.BaseEstimator; can inherit sklearn.base.ClassifierMixin score method if not defined
 class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
     def __init__(self, alpha, filters, kernel_size, activation, pool_size, strides, epochs, batchSize):
@@ -113,25 +128,25 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         self.hiddenNodes = 0
         self.batchSize = batchSize #I was using 1500 for my small data training runs; should I increase for when I am using all of the training data?
         self.steps_per_epoch = 1 #redefined in getInputArrayShape method = rounded up number of batches
-    
+
     '''This function runs and convolution and pooling methods on the input and returns the reduced array
         run prior to this function: instantiate tensor variables
         input: tensor
         output: tensor'''
     def convAndPool(self, X):
-        
-        convInput = tf.layers.conv1d(X, 
-                                     self.filters, 
-                                     self.kernel_size, 
-                                     padding = self.padding, 
+
+        convInput = tf.layers.conv1d(X,
+                                     self.filters,
+                                     self.kernel_size,
+                                     padding = self.padding,
                                      activation= self.activation)
-        
-        convInput = tf.layers.max_pooling1d(convInput, 
-                                            self.pool_size, 
-                                            self.strides, 
+
+        convInput = tf.layers.max_pooling1d(convInput,
+                                            self.pool_size,
+                                            self.strides,
                                             padding= self.padding)
         return (convInput)
-    
+
     '''This function computes the number of nodes so that the model can be instantiated before fully generating the data
         run prior to this funciton: self.getInputArrayShape()
         input: X,y (numpy arrays - data and labels respectively)
@@ -140,37 +155,37 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
     def computeNodes(self, X, y):
         input_numpyArray_shape = self.getInputArrayShape(X,y)
         print("computeNodes() print1: ",input_numpyArray_shape)
-        
+
         self.inputNodes = int(input_numpyArray_shape[1])
         self.hiddenNodes = math.ceil(int(input_numpyArray_shape[0])/
                                      (self.alpha*(self.inputNodes+self.outputNodes)))
-        
+
         print("inputNodes: ",self.inputNodes)
         print("hiddenNodes: ",self.hiddenNodes)
-    
+
     '''This function instantiates and compiles the model; notice, inputShape=numberOfFeatures, must be given to the input layer because I use the fit_generator function later
         run prior to this function: self.getInputArrayShape() and self.computeNodes()
         input: no direct input
         output: compiled nn or Sequential model
         '''
-        
+
     def model(self):
         nn = tf.keras.Sequential()
-        nn.add(keras.layers.Dense(self.inputNodes, 
-                                  activation=self.activation, 
+        nn.add(keras.layers.Dense(self.inputNodes,
+                                  activation=self.activation,
                                   input_shape=(int(self.inputShape[1]),)))
-        nn.add(keras.layers.Dense(self.hiddenNodes, 
+        nn.add(keras.layers.Dense(self.hiddenNodes,
                                   activation=self.activation))
-        nn.add(keras.layers.Dense(self.hiddenNodes, 
+        nn.add(keras.layers.Dense(self.hiddenNodes,
                                   activation=self.activation))
-        nn.add(keras.layers.Dense(self.outputNodes, 
+        nn.add(keras.layers.Dense(self.outputNodes,
                                   activation=tf.nn.softmax))
-        
-        nn.compile(optimizer=tf.train.AdamOptimizer(), 
-                   loss='sparse_categorical_crossentropy', 
+
+        nn.compile(optimizer=tf.train.AdamOptimizer(),
+                   loss='sparse_categorical_crossentropy',
                    metrics = ['accuracy'])
         return (nn)
-    
+
     '''This function runs the data through a barebones version of the generator function to ascertain what the inputArrayShape will be so that the model can be instantiated
         input: X,y (numpy arrays - data and labels respectively)
         output: defines self.steps_per_epoch (i.e. #_ofSamples/batchSize)
@@ -179,16 +194,16 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
     #This method is by far the most inefficient thing I coded, but I have to mimic the generator before actually running the generator - any suggestions for how I can make this more efficient?
     def getInputArrayShape(self,X,y):
         sess = tf.InteractiveSession()
-        
+
         placeholder = tf.placeholder(np.int32, shape=X.shape)
         dataset = tf.data.Dataset.from_tensor_slices((placeholder, y)).batch(self.batchSize)
-        
+
         self.steps_per_epoch = int(np.ceil(int(X.shape[0])/self.batchSize))
-        
+
         iterator = dataset.make_initializable_iterator()
         nextOutput = iterator.get_next()
         iterator.initializer.run(feed_dict = {placeholder:X})
-        
+
         tf.initialize_all_variables().run()
         features,labels = tf.get_default_session().run(nextOutput)
 
@@ -209,36 +224,36 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
         tf.initialize_all_variables().run()
         flattenSeqNA = flattenSeq.eval()
 
-        input_numpyArray = np.concatenate((flattenSeqNA, 
-                                           RNAseq_array, 
-                                           ATACseq_array), 
+        input_numpyArray = np.concatenate((flattenSeqNA,
+                                           RNAseq_array,
+                                           ATACseq_array),
                                           axis=1).astype(np.int32)
-    
+
         sess.close()
         self.inputShape = input_numpyArray.shape
         print("inputShape: ",self.inputShape)
         return(input_numpyArray.shape)
-    
+
     '''This function generates the batched data for each epoch of the fit process
         run during fit_generator method
         input: X,y (numpy arrays, data and labels respectively)
         output: yields the batched input_numpyArray and its corresponding labels_array
         '''
-        
+
     def generator(self, X, y):
         print("generator 1", X.shape, "\n", y.shape)
         sess = tf.InteractiveSession() #interactive session becomes default session
-        
+
         placeholder = tf.placeholder(np.int32, shape=X.shape) #define a placeholder for the data
         dataset = tf.data.Dataset.from_tensor_slices((placeholder, y)).batch(self.batchSize) #define a dataset for the data and its labels batched according to batchSize
-        
+
         iterator = dataset.make_initializable_iterator() #define iterator
         nextOutput = iterator.get_next() #nextOutput will be a tensor with the data (nextOuput[0]) and the labels (nextOuput[1])
         iterator.initializer.run(feed_dict = {placeholder:X}) #initialize the iterator, feeding X to the placeholder in the dataset
         for epochs in range(self.epochs): #need to feed the batched data for each epoch
             try:
                 while True: #will repeat for each step in the epoch
-                    tf.initialize_all_variables().run() #deprecated command, but the only way that I could successfully evaluate the tensors to get features, labels numpy arrays was to use this command coupled with the next. If I feed the model the tensors instead of the numpy arrays - then the predict() ouput size issue occurs 
+                    tf.initialize_all_variables().run() #deprecated command, but the only way that I could successfully evaluate the tensors to get features, labels numpy arrays was to use this command coupled with the next. If I feed the model the tensors instead of the numpy arrays - then the predict() ouput size issue occurs
                     features,labels = tf.get_default_session().run(nextOutput)
 
                     #print(features.shape)
@@ -264,19 +279,19 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                     tf.initialize_all_variables().run() #with these two commands, return the flattened sequence tensor to a numpyArray
                     flattenSeqNA = flattenSeq.eval()
 
-                    input_numpyArray = np.concatenate((flattenSeqNA, 
-                                                       RNAseq_array, 
-                                                       ATACseq_array), 
+                    input_numpyArray = np.concatenate((flattenSeqNA,
+                                                       RNAseq_array,
+                                                       ATACseq_array),
                                                       axis=1).astype(np.int32)
-                    
+
                     print("generator 2", input_numpyArray.shape, "\n", labels_array.shape)
                     yield(input_numpyArray, labels_array)
 
             except tf.errors.OutOfRangeError:
                 iterator.initializer.run(feed_dict = {placeholder:X}) #re-initialize so that data can be rebatched for next epoch
-        
+
         sess.close()
-        
+
     '''This method works as the fit method
         runs: self.computeNodes(), self.model() (only once in order to compile the model) and nn.fit_generator
         input: X,y (numpy arrays - data and labels respectively)
@@ -284,46 +299,46 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                 returns self'''
     def fit(self, X, y):
         print("fit print 1: ", X.shape, "\n", y.shape)
-        
+
         self.computeNodes(X,y)
-        
+
         if self.needsCompiled == True:
 
             nn = self.model()
             self.needsCompiled = False
-        
-        checkpoint_path = '/home-3/kweave23@jhu.edu/work/users/kweave23/out/checkpoints/scaleDown1_simplifiedClasses.ckpt'
-        
+
+        checkpoint_path = checkpointPath #ex:'/home-3/kweave23@jhu.edu/work/users/kweave23/out/checkpoints/scaleDown1_simplifiedClasses_refinedGrid_{}_{}_{}_{}.ckpt'.format(self.epochs, self.hiddenNodes, self.inputShape, self.alpha)
+
         '''Create checkpoint callback'''
         cp_callback = tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True, verbose=1)
-        
-        
-        nn.fit_generator(self.generator(X,y), 
-                         epochs=self.epochs, 
-                         steps_per_epoch=self.steps_per_epoch, 
+
+
+        nn.fit_generator(self.generator(X,y),
+                         epochs=self.epochs,
+                         steps_per_epoch=self.steps_per_epoch,
                          workers = 0,
                          callbacks = [cp_callback])
-                         
+
         self.estimator = nn
-                
+
         return(self)
     '''This function is used for prediction and scoring of the estimator; it contains another sort of barebones data generator (doesn't have the for loop as no epochs)
         input: X,y (numpy arrays, data and labels respectivley)
         output: defines self.estimator.score = precision
                 returns this precision score as well
-        '''    
+        '''
     def score(self, X, y):
         print("Score print 1: ", X.shape)
         all_pred_y = []
         all_true_y = []
         instance_len = []
         total_instances = 0
-        
+
         sess = tf.InteractiveSession()
-        
+
         placeholder = tf.placeholder(np.int32, shape=X.shape)
         dataset = tf.data.Dataset.from_tensor_slices((placeholder, y)).batch(self.batchSize)
-        
+
         iterator = dataset.make_initializable_iterator()
         nextOutput = iterator.get_next()
         iterator.initializer.run(feed_dict = {placeholder:X})
@@ -355,28 +370,28 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
                 tf.initialize_all_variables().run()
                 flattenSeqNA = flattenSeq.eval()
 
-                input_numpyArray2 = np.concatenate((flattenSeqNA, 
-                                                   RNAseq_array, 
-                                                   ATACseq_array), 
+                input_numpyArray2 = np.concatenate((flattenSeqNA,
+                                                   RNAseq_array,
+                                                   ATACseq_array),
                                                   axis=1).astype(np.int32)
 
                 print("Score print 3", input_numpyArray2.shape, "\n", labels_array.shape)
 
                 pred_y = self.estimator.predict(input_numpyArray2)
-                
+
                 total_instances += int(pred_y.shape[0])
                 instance_len.append(int(pred_y.shape[0]))
                 all_pred_y.append(pred_y)
                 all_true_y.append(labels)
-                
+
                 print("Score print 4: ", pred_y.shape)
-        
+
         except tf.errors.OutOfRangeError:
             pass
-        
-         
+
+
         '''compute accuracy'''
-        
+
         correct_pred = 0
         for i in range(len(all_pred_y)):
             for j in range(instance_len[i]):
@@ -386,15 +401,16 @@ class nn_wrap(skb.BaseEstimator, skb.ClassifierMixin):
 
         accuracy = (correct_pred/total_instances)*100
         print("score print 5: ", accuracy)
-        self.estimator.score = accuracy    
-        
+        self.estimator.score = accuracy
+
         sess.close()
         return(self.estimator.score)
 
 train_full_nn=nn_wrap(**params)
-rsearch = sms.RandomizedSearchCV(estimator = train_full_nn, param_distributions=param_grid, n_iter=20) 
+rsearch = sms.RandomizedSearchCV(estimator = train_full_nn, param_distributions=param_grid, n_iter=n_iter_RSCV)
 rsearch.fit(merged_train_arrays, X_labels_train_full)
 
-filename = 'VISION_classification_RSCV_best_simplifiedClasses'
-joblib.dump(rsearch.best_estimator_, filename)
+print("Best Parameters found by randomized search:", rsearch.best_params_)
+
+joblib.dump(rsearch.best_estimator_, bestEstimator)
 print("best estimator should be saved")
