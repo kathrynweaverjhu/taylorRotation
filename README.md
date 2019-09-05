@@ -28,7 +28,7 @@
 26 CTCF Bound & Nuclease Accessible & Enhancer-like & Transcribed\
 
 
-'''https://github.com/guanjue/IDEAS_2018/blob/master/example_figures/f3_vision_result.png'''. 
+[VISION IDEAS 27 epigenetic states](https://github.com/guanjue/IDEAS_2018/blob/master/example_figures/f3_vision_result.png) 
 ## Simplified Classes merging the IDEAS classes according to similar function/color (newLabel Dictionary in tensorMatrix_simplifyClasses.py)
 0 - Greens: 1, 8, 14, 17, 25\
 1 - Yellows: 4, 5\
