@@ -1,4 +1,4 @@
-## Unsimplified Classes from IDEAS segmentation of hematopoietic stem cells 
+### Unsimplified Classes from IDEAS segmentation of hematopoietic stem cells 
 0 Quiescent\
 1 Transcribed\
 2 Heterochromatin\
@@ -29,7 +29,7 @@
 
 
 [VISION IDEAS 27 epigenetic states](https://github.com/guanjue/IDEAS_2018/blob/master/example_figures/f3_vision_result.png) 
-## Simplified Classes merging the IDEAS classes according to similar function/color (newLabel Dictionary in tensorMatrix_simplifyClasses.py)
+### Simplified Classes merging the IDEAS classes according to similar function/color (newLabel Dictionary in tensorMatrix_simplifyClasses.py)
 0 - Greens: 1, 8, 14, 17, 25\
 1 - Yellows: 4, 5\
 2 - Blues: 2, 3, 16, 20, 22\
@@ -37,7 +37,7 @@
 4 - Oranges/Reds: 6, 10, 11, 12, 15, 18, 19, 21, 23, 24
 
 
-## Alternate Simplified Classes (newLabel2 Dictionary in tensorMatrix_simplifyClasses.py)\
+### Alternate Simplified Classes (newLabel2 Dictionary in tensorMatrix_simplifyClasses.py)
 0 - Greens: 1, 8, 14, 17, 25\
 1 - Yellows: 4, 5\
 2 - Blues: 3, 16, 20, 22\
